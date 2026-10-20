@@ -31,7 +31,7 @@ Do not commit book screenshots (copyright). Record title, edition, year and page
 | Cited in app/README | Status (web check, Oct 2026) | To do |
 |---|---|---|
 | Münter, *3×3 Reduction Method* (Brooks-Range Mountaineering, 2007) | **Not found.** Brooks-Range made snow-study cards, none mentioning Munter. Munter's actual book is *3×3 Lawinen* (1997; later editions ~2003/2008). | [ ] Check the screenshot's title page: which book is it? Fix the citation. |
-| Münter / *Vapaalasku — Tieto, Taito, Turvallisuus* (Kustannus Oy Vapaalasku) | Title exists in the National Library of Finland as *Vapaa lasku: tieto, taito, turvallisuus*. Author, year and publisher not confirmed. Munter isn't its author; the book likely presents his method. | [ ] Record author/editor, year, publisher, and the pages for the 3×3 matrix and the factor table. |
+| Münter / *Vapaalasku — Tieto, Taito, Turvallisuus* (Kustannus Oy Vapaalasku) | **Confirmed:** Matti Verkasalo & Jarkko-Juhani Henttonen, *Vapaa lasku – tieto, taito, turvallisuus*, Kustannus Oy Vapaalasku, Helsinki 2013, 312 pp., ISBN 978-952-92-7889-3. Munter isn't an author; the book presents his method. | [ ] Pages for the 3×3 matrix and the factor table. [ ] Fix the citation: "Verkasalo & Henttonen (2013), after Munter". |
 | Jeremy Jones, *The Art of Shralpinism* | Confirmed: Mountaineers Books, 18 Oct 2022, ISBN 9781680513301. | [ ] Page numbers for red flags, "spooky moderate" (phrase not found online) and the tips lists. |
 
 - [ ] Spell the author as **Munter** everywhere (section 3).
