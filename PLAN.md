@@ -143,6 +143,17 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 - [ ] Parse WFS `timevaluepair` in the cron script (Node XML parser), about 50 lines.
 - Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
 
+#### Optional: Snower slope sensors (Luosto-Pyhä only, checked Oct 2026)
+
+Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). Fills the gap where FMI has no station on Pyhä.
+- `GET https://app.snower.fi/api/v1/public/devices`: no login. `{area, logged_in, generated_at, server_now, devices:[{permanent_id, name, lat, lon, last_reading_at, params, values:{snow_depth_cm, delta_6h, delta_24h, delta_7d, temperature, humidity, wind_speed, wind_direction, surface_temp, ts, freshness:{state, age_s, interval_s}}}]}`.
+- `GET /api/v1/public/devices/{permanent_id}/readings?hours=N`: flat `[{ts, field, value}]` (`snow_depth_lpt_m`, `snow_depth_height_based_m`, `probe_temp`, `probe_humidity`, `ir_target_temp`).
+- 12 Pyhä devices (Honka Top/Low, Jackson Top/Low, Aittakuru, Saunakuru, Huttu, Mustikkamaa, Tajukangas, Polar, PohjoisExpressin hissilinja, Soutajan kota) plus 2 elsewhere. Filter by lat 67.02–67.06, lon 27.20–27.26; `?alue=Pyha` returns "Aluetta ei löydy". Wind only on Jackson Top and Saunakuru.
+- No CORS for github.io: cron script only.
+- `delta_24h` maps directly to the new-snow red flag.
+- Caveats: undocumented internal API of a private company, may change; resort sensors near lifts/slopes, not avalanche terrain.
+- [ ] Ask Snower (harri.valasma@snower.fi) for permission before using it.
+
 ### Phase 3 — Avalanche danger level
 
 Checked Oct 2026: no data feed found.
