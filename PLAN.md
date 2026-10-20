@@ -1,6 +1,18 @@
-# Plan: calculator math & content fixes
+# Plan: avalanche app fixes & weather/avalanche data
 
-Status: research done, no code changed yet. Step 1 blocks step 2.
+Status (Oct 2026): research only, no app code changed yet.
+
+## Principles
+
+- Data only **suggests** inputs (red flags, V, wet snow, aspects). The user confirms; nothing is set silently.
+- When unsure, err to the safe side: higher wind, warmer temperature, "unknown" instead of a guessed level.
+- Every number shown or used has a cited source, or it isn't used.
+
+## Order of work
+
+1. Section 1 (book check) → section 2 (calculator bugs). The safety bugs come first.
+2. Section 3 content fixes and section 4 offline/persistence. Weather depends on offline support.
+3. Section 6 weather & avalanche data. Parsers need in-season (Dec) checks.
 
 ## 1. Verify against book screenshots (owner: Kalle)
 
@@ -266,7 +278,15 @@ Options for FMI's areas in the cron script, best first:
   - [x] Wind: 6–7 m/s moves dry snow (FMI, tuntureiden-saaolot).
   - [ ] New snow (cm / 24 h, 72 h).
   - [ ] Warming (°C / 24 h).
-- [ ] FMI station IDs near each of the 6 areas.
+- [x] FMI station IDs near each of the 6 areas (summit station table). Elevations still open.
+
+### Build notes
+
+- [ ] Define the `latest.json` shape first: per area → forecast, observations, danger level + source + issued/valid times, and fetch time. It's the contract between the cron script and the app.
+- [ ] Parser tests on saved fixtures (FMI XML, Pyhä/Ylläs WP JSON, Open-Meteo). Capture in-season snapshots in Dec.
+- [ ] Failures: a failed cron run emails the repo owner (GitHub default). A parser returning "unknown" doesn't fail the run, so log it in `latest.json`.
+- [ ] Attribution in the app: FMI and Open-Meteo (CC BY 4.0), local forecast providers.
+- [ ] New UI strings in both EN and FI.
 
 ### Out of scope
 
