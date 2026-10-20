@@ -4,6 +4,8 @@ Status (Oct 2026): research only, no app code changed yet.
 
 ## Principles
 
+- Scope: personal use only (Oct 2026). The site is still public on GitHub Pages, so `latest.json` republishes third-party data to anyone who finds it. Permission tasks are deferred until the app is shared; attribution stays, because it's one line.
+
 - Data only **suggests** inputs (red flags, V, wet snow, aspects). The user confirms; nothing is set silently.
 - When unsure, err to the safe side: higher wind, warmer temperature, "unknown" instead of a guessed level.
 - Every number shown or used has a cited source, or it isn't used.
@@ -91,7 +93,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - GitHub disables scheduled workflows after 60 days without repo activity. Re-enable before each season.
 - Upgrade path, only if on-demand freshness is needed: a Cloudflare Worker with the same script.
 - MET Norway is now usable (the server can set a User-Agent), but Open-Meteo is enough. Keep MET as an optional second opinion.
-- Open-Meteo free tier is non-commercial only. OK for a personal app; revisit if monetized.
+- Open-Meteo free tier is non-commercial only. Personal use → fine.
 - Show data age in the app and label values as model estimates.
 - FMI open data terms (ilmatieteenlaitos.fi/avoin-data-lisenssi):
   - CC BY 4.0. Attribute in the app as "Ilmatieteen laitoksen avoin data, <dataset>" (e.g. "…, säähavainnot", "…, HARMONIE-ennuste").
@@ -229,7 +231,7 @@ Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). The only on-
 - No CORS for github.io: cron script only.
 - `delta_24h` maps directly to the new-snow red flag.
 - Caveats: undocumented internal API of a private company, may change; resort sensors near lifts/slopes, not avalanche terrain.
-- [ ] Ask Snower (harri.valasma@snower.fi) for permission before using it.
+- [ ] Before sharing the app: ask Snower (harri.valasma@snower.fi) for permission.
 
 ### Phase 3 — Avalanche danger level
 
@@ -265,7 +267,7 @@ Also from the FMI page (off-season, Oct 2026): forecast covers off-piste only (n
 
 Coverage: Pyhä and Ylläs get local forecasts; Kilpisjärvi, Ounas-Pallas, Saariselkä, Ruka (and Levi) remain FMI-only.
 
-- [ ] Ask both for permission: Lumiturvallisuuskeskus (contact page, 044 703 8806) and Ylläs Ski.
+- [ ] Before sharing the app: ask both for permission, Lumiturvallisuuskeskus (contact page, 044 703 8806) and Ylläs Ski.
 - [ ] In season (Dec): record Ylläs icon filenames/alt texts per level; confirm Pyhä filename pattern for levels 1–5.
 - [ ] Parser rejects unknown icon names → "unknown" + link (safety rule above).
 
@@ -276,7 +278,7 @@ Options for FMI's areas in the cron script, best first:
   - Breaks silently if the layout changes. Guard against that: check the expected legend colours at known pixels, and output "unknown" when they don't match.
 - [ ] **C. Fallback, always present:** link to ilmatieteenlaitos.fi/lumivyoryennuste and the `show-map.php` image with FMI attribution.
 - [ ] Ask FMI via the open-data support form (ilmatieteenlaitos.fi/tukipyynto-avoimesta-datasta) whether an avalanche feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024. An official feed replaces A/B.
-- [ ] Check FMI's terms for scraping and reusing the page and images. robots.txt + ilmatieteenlaitos.fi terms of use.
+- [ ] Before sharing the app: check FMI's terms for scraping and reusing the page and images. robots.txt + ilmatieteenlaitos.fi terms of use.
 
 ### Verify before building
 
