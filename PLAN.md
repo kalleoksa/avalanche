@@ -93,6 +93,11 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
 - MET Norway is now usable (the server can set a User-Agent), but Open-Meteo is enough. Keep MET as an optional second opinion.
 - Open-Meteo free tier is non-commercial only. OK for a personal app; revisit if monetized.
 - Show data age in the app and label values as model estimates.
+- FMI open data terms (ilmatieteenlaitos.fi/avoin-data-lisenssi):
+  - CC BY 4.0. Attribute in the app as "Ilmatieteen laitoksen avoin data, <dataset>" (e.g. "…, säähavainnot", "…, HARMONIE-ennuste").
+  - Limits: 20 000 queries/day, 600 per 5 min. The 3 h cron is far below.
+  - All times are UTC. Convert to Finnish time in the client (+2 h winter, +3 h summer).
+  - Station closures and outages: ilmatieteenlaitos.fi/puutteita-ja-muutoksia-havaintoasemilla. Check before each season.
 
 ### Phase 1 — Open-Meteo forecast for preset areas
 
@@ -150,6 +155,7 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 - Caveat: the data doesn't support this choice on accuracy. Against Saana observations, FMI by height was the worst wind source (3.0 avg error / +2.7 bias) and 925 hPa the best (2.2 / 0.0). Agreement with tunturisaa.fi isn't evidence, since it's very likely the same model. The sample is 7 h, one calm afternoon, one station.
 - The real reason to accept it: it reads high, which is the safe direction for a wind warning.
 - [ ] Until validated: fire the wind suggestion when **either** FMI by height or FMI 925 hPa is over the threshold.
+- [ ] Email info@tunturisaa.fi (meteorologist Martin Gahmberg is on the team): which model field and adjustment they use for summit temperature, and whether reuse of their data is allowed.
 - [ ] Possible explanation for Tunturisää's warmer summit temperature: an inversion. FMI confirms summits can be far warmer than valleys. The open question is whether their summit or our by-height value is right. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C; in season, compare both against summit stations.
 - [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
 
@@ -159,7 +165,7 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 | Ounas-Pallas | Muonio Laukukero | 101982 | ~761 m |
 | Ounas-Pallas | Muonio Sammaltunturi (lower) | 101983 | ~562 m |
 | Luosto-Pyhä | Sodankylä Luosto | 101939 | ~513 m |
-| Luosto-Pyhä | Pelkosenniemi Pyhätunturi (FMI fell station list; **no data since ~21–27 Aug 2026**, recheck Dec) | 101958 | – |
+| Luosto-Pyhä | ~~Pelkosenniemi Pyhätunturi~~ **closed permanently** (FMI budget cuts, last obs 8.9.2026) | 101958 | – |
 | Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
 | Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
 | Ylläs-Levi | Kittilä Kenttärova (fell between Levi and Ylläs; FMI fell station list; reports `snow_aws`) | 101987 | – |
@@ -212,10 +218,11 @@ Sources:
 - [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
 - [ ] Parse WFS `timevaluepair` in the cron script (Node XML parser), about 50 lines.
 - Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
+- Missing values: `NaN` = no reading (treat as missing, not 0). Precipitation: `-1` = no rain, `0` = under 0.1 mm. [ ] Check whether `snow_aws` uses `-1` similarly (in season).
 
 #### Optional: Snower slope sensors (Luosto-Pyhä only, checked Oct 2026)
 
-Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). Fills the gap while FMI's Pyhätunturi station (101958) is offline, and adds slope-level snow depth.
+Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). The only on-fell data for Pyhä now that FMI's Pyhätunturi station (101958) has closed; adds slope-level snow depth.
 - `GET https://app.snower.fi/api/v1/public/devices`: no login. `{area, logged_in, generated_at, server_now, devices:[{permanent_id, name, lat, lon, last_reading_at, params, values:{snow_depth_cm, delta_6h, delta_24h, delta_7d, temperature, humidity, wind_speed, wind_direction, surface_temp, ts, freshness:{state, age_s, interval_s}}}]}`.
 - `GET /api/v1/public/devices/{permanent_id}/readings?hours=N`: flat `[{ts, field, value}]` (`snow_depth_lpt_m`, `snow_depth_height_based_m`, `probe_temp`, `probe_humidity`, `ir_target_temp`).
 - 12 Pyhä devices (Honka Top/Low, Jackson Top/Low, Aittakuru, Saunakuru, Huttu, Mustikkamaa, Tajukangas, Polar, PohjoisExpressin hissilinja, Soutajan kota) plus 2 elsewhere. Filter by lat 67.02–67.06, lon 27.20–27.26; `?alue=Pyha` returns "Aluetta ei löydy". Wind only on Jackson Top and Saunakuru.
@@ -268,7 +275,7 @@ Options for FMI's areas in the cron script, best first:
   - Deterministic, no OCR.
   - Breaks silently if the layout changes. Guard against that: check the expected legend colours at known pixels, and output "unknown" when they don't match.
 - [ ] **C. Fallback, always present:** link to ilmatieteenlaitos.fi/lumivyoryennuste and the `show-map.php` image with FMI attribution.
-- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024. An official feed replaces A/B.
+- [ ] Ask FMI via the open-data support form (ilmatieteenlaitos.fi/tukipyynto-avoimesta-datasta) whether an avalanche feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024. An official feed replaces A/B.
 - [ ] Check FMI's terms for scraping and reusing the page and images. robots.txt + ilmatieteenlaitos.fi terms of use.
 
 ### Verify before building
