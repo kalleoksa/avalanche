@@ -89,6 +89,7 @@ Goal: use data to suggest red flags and inputs, not to show a general weather wi
 
 - [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
 - [ ] Parse WFS `timevaluepair` with DOMParser in the browser, about 50 lines.
+- Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
 
 ### Phase 3 — Danger level link
 
@@ -97,7 +98,7 @@ Goal: use data to suggest red flags and inputs, not to show a general weather wi
 
 ### Verify before building
 
-- [ ] CORS headers on api.open-meteo.com and opendata.fmi.fi from a github.io origin. Couldn't test from this environment.
+- [x] CORS headers on api.open-meteo.com and opendata.fmi.fi from a github.io origin. Both return `Access-Control-Allow-Origin` on GET and preflight (checked 2026-10-20).
 - [ ] Red-flag thresholds (new snow cm, wind m/s, warming °C) from a citable source, e.g. SLF/EAWS critical new-snow amounts. Don't invent numbers.
 - [ ] FMI station IDs near each of the 6 areas.
 
