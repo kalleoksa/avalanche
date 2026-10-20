@@ -112,8 +112,30 @@ Saana summit station `fmisid=102017` (~1002 m) as ground truth.
 - Next 47 h mean wind: FMI by height **11.1**, FMI 925 hPa 7.6, Open-Meteo 925 hPa **4.8**, Open-Meteo 10 m 5.4. The gap decides whether the wind red flag fires.
 - Open-Meteo gave identical 925 hPa values for best_match, ECMWF and MET Norway: likely falls back to ECMWF 0.25° for pressure levels. Unconfirmed (proxy hit Open-Meteo's daily limit).
 
-Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snowfall and valley values.
-- [ ] Validate in season: the cron script logs both forecasts next to summit stations (Saana 102017, plus Pallas and Ylläs) for ~2 weeks in Dec, then compare error.
+Cross-check with tunturisaa.fi (forecast 21.10 22:00 local = 19 UTC; forecast vs forecast, not truth):
+
+| Fell | Tunturisää summit | FMI by height (height param) | Tunturisää valley | FMI surface |
+|---|---|---|---|---|
+| Pyhä 539 m | 3 °C, 11 m/s SW | 1.4 °C, 9.7 m/s SSW (275) | 5 °C, 4 m/s | −1.6 °C, 1.6 m/s |
+| Ylläs 719 m | 5 °C, 7 m/s SW | −1.2 °C, 7.5 m/s S–SSW (379) | 1 °C, 1 m/s | 0.2 °C, 3.3 m/s |
+| Levi 531 m | 5 °C, 7 m/s SW | −1.3 °C, 7.6 m/s SSW (294) | 1 °C, 1 m/s | 1.3 °C, 3.6 m/s |
+
+- Wind matches within ~1 m/s: Tunturisää very likely uses HARMONIE at summit height too.
+- Summit temperature does not: Tunturisää is 2–6 °C warmer. FMI by height at Ylläs stays −2.0…+1.2 °C all of 21.10, so not a time-zone offset. Source of their temperature unknown.
+- FMI `meps::*` queries return identical values to `harmonie::*` on open data.
+
+Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snowfall and valley values. Summit temperature stays unconfirmed until validated.
+- [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
+
+| Area | Summit station | `fmisid` | Elevation (DEM) |
+|---|---|---|---|
+| Kilpisjärvi | Enontekiö Kilpisjärvi Saana | 102017 | ~1001 m |
+| Ounas-Pallas | Muonio Laukukero | 101982 | ~761 m |
+| Ounas-Pallas | Muonio Sammaltunturi (lower) | 101983 | ~562 m |
+| Luosto-Pyhä | Sodankylä Luosto (no station on Pyhä) | 101939 | ~513 m |
+| Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
+| Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
+| Ylläs-Levi | none: no summit station on Ylläs or Levi | – | – |
 
 ### Phase 2 — FMI observations
 
