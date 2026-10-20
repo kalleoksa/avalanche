@@ -158,6 +158,43 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 - Ylläs and Levi summits still have no station; Kenttärova is a lower fell between them. It gives partial validation only.
   - [ ] Mark Ylläs/Levi summit values in the app as "model, validated only against Kenttärova".
 
+### Reference: how summit forecasts are commonly computed (researched Oct 2026)
+
+Three standard methods:
+1. **Grid point + lapse-rate height correction:** `T_summit = T_grid − lapse × (real elevation − model elevation)`, typically 0.6–0.65 °C / 100 m.
+   - Used by: MET Locationforecast (an "adiabatic height adjustment", temperature only) and Open-Meteo (statistical downscaling with a 90 m DEM).
+   - Fails in inversions: it corrects downward from cold valley air, while the real summit sits in warmer free air.
+   - → Don't use elevation-adjusted Open-Meteo/MET temperatures for summits.
+2. **Free-air interpolation:** take model temperature and wind at the summit's actual altitude from pressure or model levels. Used for Everest forecasts and by mountain-forecast.com (secondary source).
+   - Free-air temperature can then be adjusted for surface heating or cooling.
+   - FMI HARMONIE `hybrid` with `height = summit − model terrain` is this method. → Our choice matches standard practice.
+3. **Statistical post-processing against stations:** MOS, a Kalman filter (~4–5 days of training), or running-mean bias removal.
+   - Kalman and running-mean did better than MOS during persistent valley cold pools (Cheng & Steenburgh).
+   - MET Nordic does this with station + Netatmo data.
+   - [ ] Optional after validation: per-station 7-day running-mean bias correction in the cron script, for fells that have a summit station. Ylläs/Levi stay raw.
+
+Wind:
+- Models underestimate summit and crest wind. Smoothed terrain plus "effective roughness" drag lowers the 10 m wind, and speed-up over unresolved summits isn't modelled (Howard & Clark 2007; AROME downscaling studies).
+- Free-air wind at summit height is the usual proxy, and can still miss crest and gap acceleration. FMI also notes channelled wind between fells can exceed summit wind.
+- → Treat forecast summit wind as a lower bound. The +2.7 m/s bias in our 7 h sample goes against the literature, so the sample is too small to conclude.
+
+HARMONIE-AROME / MEPS in this terrain:
+- Both overestimate surface inversions.
+- MEPS ran up to 6 K warmer than AROME-Arctic in 200–500 m deep valleys (northern Norway plateau, similar relief to the fells).
+- Sodankylä mast verification found a cold screen-temperature bias.
+- → Valley temperatures may be too cold or too inverted. Another reason to use the warmest source for the wet-snow suggestion.
+
+Sources:
+- https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/met.177
+- https://api.met.no/doc/locationforecast/FAQ
+- https://open-meteo.com/en/docs/ecmwf-api
+- https://www.eoas.ubc.ca/courses/atsc113/snow/met_concepts/06-met_concepts/06h-vertical-temp-interp/
+- https://rmets.onlinelibrary.wiley.com/doi/10.1002/met.12
+- https://wes.copernicus.org/articles/11/3823/2026/
+- https://journals.ametsoc.org/view/journals/wefo/aop/WAF-D-24-0163.1/WAF-D-24-0163.1.pdf
+- https://www.researchgate.net/publication/287807687_Weather_model_verification_using_Sodankyla_mast_measurements
+- https://impacts.ucar.edu/en/publications/strengths-and-weaknesses-of-mos-running-mean-bias-removal-and-kal/
+
 ### Phase 2 — FMI observations
 
 - [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
