@@ -97,11 +97,13 @@ Checked Oct 2026: no data feed found.
 - None of the 151 FMI WFS stored queries is about avalanches.
 - The forecast page's map is a server-drawn image (`cdn.fmi.fi/apps/avalanche-forecast/show-map.php?lang=fi|en`) with no JSON call behind it.
 - The FMI warnings GeoServer (`/geoserver/alert/ows`) allows cross-origin requests (CORS `*`) but has no avalanche layer.
+- `cdn.fmi.fi/apps/avalanche-forecast/` serves PNG only, all with CORS `*`: `show-map.php` (1200×1200 map, 6 areas, "Updated" timestamp) and `show-graph.php?location=<area>` (220×220 chart of levels 0–5 over 6 days). No JSON variant.
+- EAWS feed `static.avalanche.report/eaws_bulletins/<date>/<date>-FI.{json,ratings.json,problems.json,raw.png}`: regions FI-01…FI-06 (FI-01 = Kilpisjärvi), GET has CORS `*`. Shapes: `{"maxDangerRatings": {"FI-01": n, "FI-01:am": n, …}}` and `{"avalancheProblems": {"FI-01": [...], …}}`.
+- **EAWS FI ratings are broken:** every region is 0 in all of 2024–2026 sampled, while the archived `raw.png` for 2026-03-15 shows level 1 everywhere. 2023 had real values. The mirror only ingests FMI's PNG, so there's no reliable data source.
 
 - [ ] Link "Check the current level" to ilmatieteenlaitos.fi/lumivyoryennuste next to the V selector.
 - [ ] Optional: embed the `show-map.php` image (an `<img>` needs no CORS). Unofficial, so it may change. Add a fallback to the link and attribution to FMI.
-- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned.
-- [ ] Not yet checked: what `cdn.fmi.fi` serves, and whether Finland publishes through the EAWS feeds (`static.avalanche.report`, EAWS regions on GitLab/GitHub). Needs these allowlisted: `cdn.fmi.fi`, `static.avalanche.report`, `gitlab.com`, `raw.githubusercontent.com`. Re-check in season (Dec–Apr).
+- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024.
 
 ### Verify before building
 
