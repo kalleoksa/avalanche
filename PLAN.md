@@ -42,6 +42,12 @@ Status: research done, no code changed yet. Step 1 blocks step 2.
 - [ ] Pole-angle technique: EN and FI describe different methods; EN item 1 is physically unclear. Consider a diagram.
 - [ ] EN T1 description repeats "Above 40°".
 - [ ] T3 spacing definition: add ≥10 m on ascent.
+- [ ] Safety basics from FMI (ilmatieteenlaitos.fi/ohjeita-lumivyoryihin-varautumiseen), citable. Missing from the app:
+  - Don't go alone; tell someone your route.
+  - Phone charged, call 112; keep it apart from the beacon.
+  - Terrain traps: gullies, under/on cornices, slope bottom.
+  - Load: snowmobile always heavy; snowshoes slightly less than skis. Text only, not a new calculator option.
+  - Optional gear: saw, airbag pack.
 
 ## 4. Field usability
 
@@ -141,13 +147,14 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 | Ounas-Pallas | Muonio Laukukero | 101982 | ~761 m |
 | Ounas-Pallas | Muonio Sammaltunturi (lower) | 101983 | ~562 m |
 | Luosto-Pyhä | Sodankylä Luosto | 101939 | ~513 m |
-| Luosto-Pyhä | Pelkosenniemi Pyhätunturi (FMI fell station list) | ? | ? |
+| Luosto-Pyhä | Pelkosenniemi Pyhätunturi (FMI fell station list; **no data since ~21–27 Aug 2026**, recheck Dec) | 101958 | – |
 | Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
 | Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
-| Ylläs-Levi | Kittilä Kenttärova (fell between Levi and Ylläs; FMI fell station list) | ? | ? |
+| Ylläs-Levi | Kittilä Kenttärova (fell between Levi and Ylläs; FMI fell station list; reports `snow_aws`) | 101987 | – |
+| Saariselkä (valley ref.) | Inari Saariselkä matkailukeskus | 102005 | – |
 
 - FMI's fell station list (ilmatieteenlaitos.fi/tuntureiden-saaolot) also names Pyhätunturi, Kenttärova and Saariselkä matkailukeskus (a valley reference). The earlier "no station on Pyhä / Ylläs-Levi" was wrong.
-  - [ ] Look up `fmisid` and elevation for Pyhätunturi, Kenttärova and Saariselkä matkailukeskus.
+  - [x] `fmisid` for Pyhätunturi, Kenttärova and Saariselkä matkailukeskus (table above). Elevations still unknown.
 - Ylläs and Levi summits still have no station; Kenttärova is a lower fell between them. It gives partial validation only.
   - [ ] Mark Ylläs/Levi summit values in the app as "model, validated only against Kenttärova".
 
@@ -159,7 +166,7 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 
 #### Optional: Snower slope sensors (Luosto-Pyhä only, checked Oct 2026)
 
-Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). Fills the gap where FMI has no station on Pyhä.
+Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). Fills the gap while FMI's Pyhätunturi station (101958) is offline, and adds slope-level snow depth.
 - `GET https://app.snower.fi/api/v1/public/devices`: no login. `{area, logged_in, generated_at, server_now, devices:[{permanent_id, name, lat, lon, last_reading_at, params, values:{snow_depth_cm, delta_6h, delta_24h, delta_7d, temperature, humidity, wind_speed, wind_direction, surface_temp, ts, freshness:{state, age_s, interval_s}}}]}`.
 - `GET /api/v1/public/devices/{permanent_id}/readings?hours=N`: flat `[{ts, field, value}]` (`snow_depth_lpt_m`, `snow_depth_height_based_m`, `probe_temp`, `probe_humidity`, `ir_target_temp`).
 - 12 Pyhä devices (Honka Top/Low, Jackson Top/Low, Aittakuru, Saunakuru, Huttu, Mustikkamaa, Tajukangas, Polar, PohjoisExpressin hissilinja, Soutajan kota) plus 2 elsewhere. Filter by lat 67.02–67.06, lon 27.20–27.26; `?alue=Pyha` returns "Aluetta ei löydy". Wind only on Jackson Top and Saunakuru.
@@ -180,7 +187,33 @@ Checked Oct 2026: no data feed found.
 
 Safety rule: a scraped level only **pre-selects** V. The official image and link are always shown next to it, the user confirms, and V is never set silently. If parsing fails, isn't confident, or the data is older than today's forecast, show "unknown" plus the link.
 
-Options in the cron script, best first:
+Also from the FMI page (off-season, Oct 2026): forecast covers off-piste only (not groomed slopes), issued daily for today + 3 days; the chart adds the 2 previous days. Show the off-piste note in the app. No per-area text in the HTML off-season, so option A below still needs the in-season check.
+
+#### Local forecasts (checked Oct 2026): preferred over parsing FMI images
+
+**Pyhätunturi: lumiturvallisuuskeskus.fi** (Luosto-Pyhä area, Pyhä only)
+- WordPress custom post type: `GET https://lumiturvallisuuskeskus.fi/wp-json/wp/v2/lumivyoryennusteet?per_page=100`. 319 forecasts across seasons; 2025–26: 58 (1.11.2025–15.4.2026, ~2–3/week). RSS: `/lumivyoryennuste/feed/`.
+- CORS reflects `https://kalleoksa.github.io`: the client could read it directly, but keep it in the cron script with the rest.
+- `acf` is empty; parse `content.rendered` (EAWS conventions):
+  - Danger level: icon filename `Icon-Avalanche-Danger-Level-Dry-Snow-<n>-EAWS….png`.
+  - Problems: EAWS icon filenames (`…Problem-Wind-Drifted-Snow…`, `…Persistent-Weak-Layer…`) and headings "Lumivyöryongelma N – …".
+  - Per problem: `Koko:` (size), `Aiheuttaja:` (trigger), `Esiintyvyys:` (distribution), `Todennäköisyys:` (likelihood).
+  - Aspects: inline SVG compass, 8 polygons in fixed order E, N, S, W, SE, NE, SW, NW; `fill: #F2B31D` = dangerous aspect.
+  - "Lisätty" (published) and "Voimassa" (valid until) times; weather and snow text.
+- Maps to V (danger level) and to aspect inputs, as suggestions only.
+
+**Ylläs: ski.yllas.fi** (Ylläs-Levi area, Ylläs only)
+- Single page overwritten per forecast, no archive: `GET https://ski.yllas.fi/wp-json/wp/v2/pages/311` (or the page HTML). CORS reflects github.io.
+- Level is an icon in the `y-avalanche` block: `img.y-avalanche__icon`, level in `alt`. Off-season: `No-rating.png`, alt "Ei luokiteltu". In-season icon names unknown.
+- Forecasters: CAA-qualified avalanche practitioners (per the page).
+
+Coverage: Pyhä and Ylläs get local forecasts; Kilpisjärvi, Ounas-Pallas, Saariselkä, Ruka (and Levi) remain FMI-only.
+
+- [ ] Ask both for permission: Lumiturvallisuuskeskus (contact page, 044 703 8806) and Ylläs Ski.
+- [ ] In season (Dec): record Ylläs icon filenames/alt texts per level; confirm Pyhä filename pattern for levels 1–5.
+- [ ] Parser rejects unknown icon names → "unknown" + link (safety rule above).
+
+Options for FMI's areas in the cron script, best first:
 - [ ] **A. Scrape the page HTML.** Check in season (Dec) whether `lumivyoryennuste` contains per-area level and text in markup. If yes: parse it, and reject the result when the "Updated" date isn't today.
 - [ ] **B. Sample pixel colours.** Read the danger colour at fixed per-area coordinates in `show-graph.php?location=<area>` (simpler, 6 days) or in `show-map.php`.
   - Deterministic, no OCR.
