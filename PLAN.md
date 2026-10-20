@@ -1,0 +1,328 @@
+# Plan: avalanche app fixes & weather/avalanche data
+
+Status (Oct 2026): research only, no app code changed yet.
+
+## Principles
+
+- Scope: personal use only (Oct 2026). The site is still public on GitHub Pages, so `latest.json` republishes third-party data to anyone who finds it. Permission tasks are deferred until the app is shared; attribution stays, because it's one line.
+
+- Data only **suggests** inputs (red flags, V, wet snow, aspects). The user confirms; nothing is set silently.
+- When unsure, err to the safe side: higher wind, warmer temperature, "unknown" instead of a guessed level.
+- Every number shown or used has a cited source, or it isn't used.
+
+## Order of work
+
+1. Section 1 (book check) → section 2 (calculator bugs). The safety bugs come first.
+2. Section 3 content fixes and section 4 offline/persistence. Weather depends on offline support.
+3. Section 6 weather & avalanche data. Parsers need in-season (Dec) checks.
+
+## 1. Verify against book screenshots (owner: Kalle)
+
+- [ ] Is "frequented slope" (×2) 2nd class or 3rd class? Decides whether it still counts in wet snow (app currently drops it).
+- [ ] What does the book say for level 4 (High)? Allowed with conditions, or out of scope?
+- [ ] Any factor for solo travel?
+- [ ] Source of "4×2×3=24" in the level-5 text (code allows max 4 × 8 × 3 = 96).
+- [ ] "Avoid northern half": book says WNW–N–ESE (180°) or WNW–N–ENE (135°, current)?
+
+### Book sources: citations to verify (from your copies)
+
+Do not commit book screenshots (copyright). Record title, edition, year and page numbers only.
+
+| Cited in app/README | Status (web check, Oct 2026) | To do |
+|---|---|---|
+| Münter, *3×3 Reduction Method* (Brooks-Range Mountaineering, 2007) | **Not found.** Brooks-Range made snow-study cards, none mentioning Munter. Munter's actual book is *3×3 Lawinen* (1997; later editions ~2003/2008). | [ ] Check the screenshot's title page: which book is it? Fix the citation. |
+| Münter / *Vapaalasku — Tieto, Taito, Turvallisuus* (Kustannus Oy Vapaalasku) | **Confirmed:** Matti Verkasalo & Jarkko-Juhani Henttonen, *Vapaa lasku – tieto, taito, turvallisuus*, Kustannus Oy Vapaalasku, Helsinki 2013, 312 pp., ISBN 978-952-92-7889-3. Munter isn't an author; the book presents his method. | [ ] Pages for the 3×3 matrix and the factor table. [ ] Fix the citation: "Verkasalo & Henttonen (2013), after Munter". |
+| Jeremy Jones, *The Art of Shralpinism* | Confirmed: Mountaineers Books, 18 Oct 2022, ISBN 9781680513301. | [ ] Page numbers for red flags, "spooky moderate" (phrase not found online) and the tips lists. |
+
+- [ ] Spell the author as **Munter** everywhere (section 3).
+- [ ] Once confirmed, put the full citations in README and give each app `source:` string a page reference.
+
+## 2. Calculator fixes (confirmed bugs)
+
+- [ ] T1: add ×1 option "Steepest section ≥40°" (source: >39° = no reduction).
+- [ ] T3: add ×1 option "Large group without spacing" (+ solo, per step 1).
+  - Today min divisor = 2×1×2 = 4 → Moderate (V=4) always passes.
+- [ ] Level 3: fail if T1 = ×1 (Munter: first-class factor mandatory at Considerable).
+- [ ] Level 5: always fail, regardless of O (today 32/96 = 0.33 shows "✓ Acceptable").
+- [ ] Level 4: handle per book (step 1).
+- [ ] Northern half aspects per step 1 (EN + FI).
+- [ ] Move factor values out of `en`/`fi` into one shared data table.
+- [ ] Extract pure `calc()` + a few Vitest cases covering the above edge cases.
+
+## Already verified correct (no change)
+
+- V = 2 / 4 / 8 / 16 / 32; O = V / (T1×T2×T3); acceptable if O ≤ 1.
+- T1: <40° ×2, ~35° ×3, <35° (30–34°) ×4.
+- T2 sector ×2/×3/×4; frequented ×2; all aspects dangerous → sector = 1 only.
+- T3: large group + spacing ×2, small group ×2, small group + spacing ×3.
+- Wet snow invalidates T2.
+
+## 3. Content fixes
+
+- [ ] Author name is Werner **Munter** (no umlaut) — README + app text.
+- [ ] "Spooky Moderate": "most fatalities at this level" is wrong (Considerable has most).
+- [ ] FI: 1000 vertical feet ≠ "tuhat pystymetriä" (~300 m).
+- [ ] FI: "10 astetta" → 10°F ≈ 5–6°C.
+- [ ] FI: new-snow flag says 24h *before* storm; EN says within 24h of.
+- [ ] FI: duplicate "Aikataulu" (also duplicate React key).
+- [ ] FI: missing tips (Mindset 3, Practical 1); fix "Don't sluff your exit", "Nousta"→"Nouse", "vyöryalttiiilla", leftover English.
+- [ ] Pole-angle technique: EN and FI describe different methods; EN item 1 is physically unclear. Consider a diagram.
+- [ ] EN T1 description repeats "Above 40°".
+- [ ] T3 spacing definition: add ≥10 m on ascent.
+- [ ] Safety basics from FMI (ilmatieteenlaitos.fi/ohjeita-lumivyoryihin-varautumiseen), citable. Missing from the app:
+  - Don't go alone; tell someone your route.
+  - Phone charged, call 112; keep it apart from the beacon.
+  - Terrain traps: gullies, under/on cornices, slope bottom.
+  - Load: snowmobile always heavy; snowshoes slightly less than skis. Text only, not a new calculator option.
+  - Optional gear: saw, airbag pack.
+
+## 4. Field usability
+
+- [ ] Offline support (vite-plugin-pwa + manifest).
+- [ ] Persist lang / flags / inputs in localStorage; add reset.
+- [ ] Contrast & font size (≥14px, ≥4.5:1).
+- [ ] 3×3 checkboxes: make interactive or use bullets.
+- [ ] Scroll to top on tab change.
+- [ ] Show red-flag count in calculator result; disclaimer in-app.
+
+## 5. Housekeeping
+
+- [ ] CI: `npm ci`, Node 22/24 (20 is EOL).
+- [ ] Move remaining `lang === "en" ? …` strings into `T`.
+
+## 6. Weather & avalanche reports (required feature)
+
+Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to show a general weather widget. A backend is allowed.
+
+### Architecture: scheduled GitHub Action, no server
+
+- A Node script runs on a GitHub Actions cron and writes `data/latest.json`. The same workflow deploys it to Pages with the app.
+  - Fetches: Open-Meteo (6 areas), FMI observations (XML parsed in Node), the avalanche level (Phase 3).
+  - No server, secrets, database or cost.
+- The client reads one JSON file from its own origin: no CORS, no per-client API limits, and offline caching is trivial with the service worker (section 4).
+- Cron: every 3 h, Dec–Apr (`0 */3 * 12,1-4 *`). Off-season: daily, or off entirely.
+- Gotchas:
+  - Actions cron can run 15–60 min late.
+  - GitHub disables scheduled workflows after 60 days without repo activity. Re-enable before each season.
+- Upgrade path, only if on-demand freshness is needed: a Cloudflare Worker with the same script.
+- MET Norway is now usable (the server can set a User-Agent), but Open-Meteo is enough. Keep MET as an optional second opinion.
+- Open-Meteo free tier is non-commercial only. Personal use → fine.
+- Show data age in the app and label values as model estimates.
+- FMI open data terms (ilmatieteenlaitos.fi/avoin-data-lisenssi):
+  - CC BY 4.0. Attribute in the app as "Ilmatieteen laitoksen avoin data, <dataset>" (e.g. "…, säähavainnot", "…, HARMONIE-ennuste").
+  - Limits: 20 000 queries/day, 600 per 5 min. The 3 h cron is far below.
+  - All times are UTC. Convert to Finnish time in the client (+2 h winter, +3 h summer).
+  - Station closures and outages: ilmatieteenlaitos.fi/puutteita-ja-muutoksia-havaintoasemilla. Check before each season.
+
+### Phase 1 — Open-Meteo forecast for preset areas
+
+- [ ] Area picker: the 6 FMI avalanche areas (Ruka, Luosto-Pyhä, Ylläs-Levi, Ounas-Pallas, Saariselkä, Kilpisjärvi), using fell-top coordinates.
+- [ ] One GET per area with `models=best_match`. Fetch the past 72 h and the next 48 h:
+  - snowfall
+  - temperature (2 m and freezing level)
+  - wind and gusts at 10 m
+  - summit wind and temperature: FMI HARMONIE by height (see "Summit wind source" below); 850 hPa (≈1500 m) is too high
+- [ ] Map data to existing red flags as **suggestions** the user confirms. Never auto-check.
+  - New snow: 24 h / 72 h snowfall above a threshold.
+  - Wind: summit wind ≥ 6 m/s while snow is dry (below 0 °C). FMI: "Jo 6–7 m/s tuulen nopeus saa kevyen pakkaslumen liikkeelle" (6–7 m/s already moves light dry snow). Use the lower end.
+  - Wind, stronger signal: the same direction for several days. FMI: days of steady wind build wind slabs on lee slopes. Show the dominant direction so the user knows which aspects are loaded.
+  - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
+- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining. Use the **warmest** of valley forecast, summit forecast and summit station observation. Inversions are common, with the summit up to 10–20 °C warmer than the valley (FMI), so valley-only would miss summit thaw. Warm is the safe direction for this suggestion.
+- [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
+- [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
+
+### Reference: tunturisaa.fi (checked Oct 2026)
+
+Shows separate summit and valley forecasts for Lapland fells. Built after the Pallas accident (New Year 2024), where valley-level forecasts showed much lighter wind than on the fell top.
+- SvelteKit front end; data from its own backend `tunturisaa-server.onrender.com/trpc` (tRPC: `getOverview`, `getMountain`, refetched every 15 min). Backend not reachable from here, so CORS and the method behind it are unverified.
+- Source: FMI open data, HARMONIE-AROME. Per hour: `{ ts, smartSymbol, peak: {temperature, windSpeedMs, windDirectionDeg}, base: {…}, cloudLowerLimit, cloudLowerLimitHeight }`.
+- Don't use it as a source: its terms allow personal, non-commercial use only and forbid copying; it runs on a free host.
+- Copy the idea instead: show summit vs valley wind/temperature and the cloud base.
+  - [ ] Summit: FMI HARMONIE by height (below). Valley: 10 m wind. Cloud base if a source has it.
+- Product scope: tunturisaa.fi already shows the full summit/valley forecast. Don't rebuild it. This app's value is turning data into red-flag and calculator suggestions.
+  - [ ] Keep the weather view minimal: only the values behind each suggestion, plus their age.
+  - [ ] Link to tunturisaa.fi for the full forecast.
+
+### Summit wind source (compared Oct 2026, Saana)
+
+Saana summit station `fmisid=102017` (~1002 m) as ground truth.
+- FMI `fmi::forecast::harmonie::hybrid::point::simple` takes `height` **above model terrain**, not sea level. HARMONIE's 2.5 km terrain at Saana is 574 m (real 1002 m). Per fell: `height = summit elevation − GeopHeight` (from `harmonie::surface::point`, parameter `GeopHeight`).
+- 925 hPa sits at ~790–875 m: above most of the 6 areas' summits (Ruka, Levi, Luosto, Kaunispää ~440–530 m; Ylläs ~720 m). A fixed pressure level doesn't fit; the per-fell height does.
+- 7 h overlap with observations (calm afternoon), wind error avg / bias m/s:
+  - FMI by height 3.0 / +2.7; FMI 925 hPa 2.2 / 0.0; Open-Meteo 925 hPa 2.2 / −2.2.
+  - Ground level (FMI surface, Open-Meteo 10 m) ~3.5 / −3.5: far too low at the summit.
+- Next 47 h mean wind: FMI by height **11.1**, FMI 925 hPa 7.6, Open-Meteo 925 hPa **4.8**, Open-Meteo 10 m 5.4. The gap decides whether the wind red flag fires.
+- Open-Meteo gave identical 925 hPa values for best_match, ECMWF and MET Norway: likely falls back to ECMWF 0.25° for pressure levels. Unconfirmed (proxy hit Open-Meteo's daily limit).
+
+Cross-check with tunturisaa.fi (forecast 21.10 22:00 local = 19 UTC; forecast vs forecast, not truth):
+
+| Fell | Tunturisää summit | FMI by height (height param) | Tunturisää valley | FMI surface |
+|---|---|---|---|---|
+| Pyhä 539 m | 3 °C, 11 m/s SW | 1.4 °C, 9.7 m/s SSW (275) | 5 °C, 4 m/s | −1.6 °C, 1.6 m/s |
+| Ylläs 719 m | 5 °C, 7 m/s SW | −1.2 °C, 7.5 m/s S–SSW (379) | 1 °C, 1 m/s | 0.2 °C, 3.3 m/s |
+| Levi 531 m | 5 °C, 7 m/s SW | −1.3 °C, 7.6 m/s SSW (294) | 1 °C, 1 m/s | 1.3 °C, 3.6 m/s |
+
+- Wind matches within ~1 m/s: Tunturisää very likely uses HARMONIE at summit height too.
+- Summit temperature does not: Tunturisää is 2–6 °C warmer. FMI by height at Ylläs stays −2.0…+1.2 °C all of 21.10, so not a time-zone offset. Source of their temperature unknown.
+- FMI `meps::*` queries return identical values to `harmonie::*` on open data.
+
+Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snowfall and valley values. Summit temperature stays unconfirmed until validated.
+- Caveat: the data doesn't support this choice on accuracy. Against Saana observations, FMI by height was the worst wind source (3.0 avg error / +2.7 bias) and 925 hPa the best (2.2 / 0.0). Agreement with tunturisaa.fi isn't evidence, since it's very likely the same model. The sample is 7 h, one calm afternoon, one station.
+- The real reason to accept it: it reads high, which is the safe direction for a wind warning.
+- [ ] Until validated: fire the wind suggestion when **either** FMI by height or FMI 925 hPa is over the threshold.
+- [ ] Email info@tunturisaa.fi (meteorologist Martin Gahmberg is on the team): which model field and adjustment they use for summit temperature, and whether reuse of their data is allowed.
+- [ ] Possible explanation for Tunturisää's warmer summit temperature: an inversion. FMI confirms summits can be far warmer than valleys. The open question is whether their summit or our by-height value is right. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C; in season, compare both against summit stations.
+- [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
+
+| Area | Summit station | `fmisid` | Elevation (DEM) |
+|---|---|---|---|
+| Kilpisjärvi | Enontekiö Kilpisjärvi Saana | 102017 | ~1001 m |
+| Ounas-Pallas | Muonio Laukukero | 101982 | ~761 m |
+| Ounas-Pallas | Muonio Sammaltunturi (lower) | 101983 | ~562 m |
+| Luosto-Pyhä | Sodankylä Luosto | 101939 | ~513 m |
+| Luosto-Pyhä | ~~Pelkosenniemi Pyhätunturi~~ **closed permanently** (FMI budget cuts, last obs 8.9.2026) | 101958 | – |
+| Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
+| Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
+| Ylläs-Levi | Kittilä Kenttärova (fell between Levi and Ylläs; FMI fell station list; reports `snow_aws`) | 101987 | – |
+| Saariselkä (valley ref.) | Inari Saariselkä matkailukeskus | 102005 | – |
+
+- FMI's fell station list (ilmatieteenlaitos.fi/tuntureiden-saaolot) also names Pyhätunturi, Kenttärova and Saariselkä matkailukeskus (a valley reference). The earlier "no station on Pyhä / Ylläs-Levi" was wrong.
+  - [x] `fmisid` for Pyhätunturi, Kenttärova and Saariselkä matkailukeskus (table above). Elevations still unknown.
+- Ylläs and Levi summits still have no station; Kenttärova is a lower fell between them. It gives partial validation only.
+  - [ ] Mark Ylläs/Levi summit values in the app as "model, validated only against Kenttärova".
+
+### Reference: how summit forecasts are commonly computed (researched Oct 2026)
+
+Three standard methods:
+1. **Grid point + lapse-rate height correction:** `T_summit = T_grid − lapse × (real elevation − model elevation)`, typically 0.6–0.65 °C / 100 m.
+   - Used by: MET Locationforecast (an "adiabatic height adjustment", temperature only) and Open-Meteo (statistical downscaling with a 90 m DEM).
+   - Fails in inversions: it corrects downward from cold valley air, while the real summit sits in warmer free air.
+   - → Don't use elevation-adjusted Open-Meteo/MET temperatures for summits.
+2. **Free-air interpolation:** take model temperature and wind at the summit's actual altitude from pressure or model levels. Used for Everest forecasts and by mountain-forecast.com (secondary source).
+   - Free-air temperature can then be adjusted for surface heating or cooling.
+   - FMI HARMONIE `hybrid` with `height = summit − model terrain` is this method. → Our choice matches standard practice.
+3. **Statistical post-processing against stations:** MOS, a Kalman filter (~4–5 days of training), or running-mean bias removal.
+   - Kalman and running-mean did better than MOS during persistent valley cold pools (Cheng & Steenburgh).
+   - MET Nordic does this with station + Netatmo data.
+   - [ ] Optional after validation: per-station 7-day running-mean bias correction in the cron script, for fells that have a summit station. Ylläs/Levi stay raw.
+
+Wind:
+- Models underestimate summit and crest wind. Smoothed terrain plus "effective roughness" drag lowers the 10 m wind, and speed-up over unresolved summits isn't modelled (Howard & Clark 2007; AROME downscaling studies).
+- Free-air wind at summit height is the usual proxy, and can still miss crest and gap acceleration. FMI also notes channelled wind between fells can exceed summit wind.
+- → Treat forecast summit wind as a lower bound. The +2.7 m/s bias in our 7 h sample goes against the literature, so the sample is too small to conclude.
+
+HARMONIE-AROME / MEPS in this terrain:
+- Both overestimate surface inversions.
+- MEPS ran up to 6 K warmer than AROME-Arctic in 200–500 m deep valleys (northern Norway plateau, similar relief to the fells).
+- Sodankylä mast verification found a cold screen-temperature bias.
+- → Valley temperatures may be too cold or too inverted. Another reason to use the warmest source for the wet-snow suggestion.
+
+Sources:
+- https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/met.177
+- https://api.met.no/doc/locationforecast/FAQ
+- https://open-meteo.com/en/docs/ecmwf-api
+- https://www.eoas.ubc.ca/courses/atsc113/snow/met_concepts/06-met_concepts/06h-vertical-temp-interp/
+- https://rmets.onlinelibrary.wiley.com/doi/10.1002/met.12
+- https://wes.copernicus.org/articles/11/3823/2026/
+- https://journals.ametsoc.org/view/journals/wefo/aop/WAF-D-24-0163.1/WAF-D-24-0163.1.pdf
+- https://www.researchgate.net/publication/287807687_Weather_model_verification_using_Sodankyla_mast_measurements
+- https://impacts.ucar.edu/en/publications/strengths-and-weaknesses-of-mos-running-mean-bias-removal-and-kal/
+
+### Phase 2 — FMI observations
+
+- [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
+- [ ] Parse WFS `timevaluepair` in the cron script (Node XML parser), about 50 lines.
+- Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
+- Missing values: `NaN` = no reading (treat as missing, not 0). Precipitation: `-1` = no rain, `0` = under 0.1 mm. [ ] Check whether `snow_aws` uses `-1` similarly (in season).
+
+#### Optional: Snower slope sensors (Luosto-Pyhä only, checked Oct 2026)
+
+Resort snow sensors on Pyhä slopes (radar-based, ~8 min interval). The only on-fell data for Pyhä now that FMI's Pyhätunturi station (101958) has closed; adds slope-level snow depth.
+- `GET https://app.snower.fi/api/v1/public/devices`: no login. `{area, logged_in, generated_at, server_now, devices:[{permanent_id, name, lat, lon, last_reading_at, params, values:{snow_depth_cm, delta_6h, delta_24h, delta_7d, temperature, humidity, wind_speed, wind_direction, surface_temp, ts, freshness:{state, age_s, interval_s}}}]}`.
+- `GET /api/v1/public/devices/{permanent_id}/readings?hours=N`: flat `[{ts, field, value}]` (`snow_depth_lpt_m`, `snow_depth_height_based_m`, `probe_temp`, `probe_humidity`, `ir_target_temp`).
+- 12 Pyhä devices (Honka Top/Low, Jackson Top/Low, Aittakuru, Saunakuru, Huttu, Mustikkamaa, Tajukangas, Polar, PohjoisExpressin hissilinja, Soutajan kota) plus 2 elsewhere. Filter by lat 67.02–67.06, lon 27.20–27.26; `?alue=Pyha` returns "Aluetta ei löydy". Wind only on Jackson Top and Saunakuru.
+- No CORS for github.io: cron script only.
+- `delta_24h` maps directly to the new-snow red flag.
+- Caveats: undocumented internal API of a private company, may change; resort sensors near lifts/slopes, not avalanche terrain.
+- [ ] Before sharing the app: ask Snower (harri.valasma@snower.fi) for permission.
+
+### Phase 3 — Avalanche danger level
+
+Checked Oct 2026: no data feed found.
+- None of the 151 FMI WFS stored queries is about avalanches.
+- The forecast page's map is a server-drawn image (`cdn.fmi.fi/apps/avalanche-forecast/show-map.php?lang=fi|en`) with no JSON call behind it.
+- The FMI warnings GeoServer (`/geoserver/alert/ows`) allows cross-origin requests (CORS `*`) but has no avalanche layer.
+- `cdn.fmi.fi/apps/avalanche-forecast/` serves PNG only, all with CORS `*`: `show-map.php` (1200×1200 map, 6 areas, "Updated" timestamp) and `show-graph.php?location=<area>` (220×220 chart of levels 0–5 over 6 days). No JSON variant.
+- EAWS feed `static.avalanche.report/eaws_bulletins/<date>/<date>-FI.{json,ratings.json,problems.json,raw.png}`: regions FI-01…FI-06 (FI-01 = Kilpisjärvi), GET has CORS `*`. Shapes: `{"maxDangerRatings": {"FI-01": n, "FI-01:am": n, …}}` and `{"avalancheProblems": {"FI-01": [...], …}}`.
+- **EAWS FI ratings are broken:** every region is 0 in all of 2024–2026 sampled, while the archived `raw.png` for 2026-03-15 shows level 1 everywhere. 2023 had real values. The mirror only ingests FMI's PNG, so there's no reliable data source.
+
+Safety rule: a scraped level only **pre-selects** V. The official image and link are always shown next to it, the user confirms, and V is never set silently. If parsing fails, isn't confident, or the data is older than today's forecast, show "unknown" plus the link.
+
+Also from the FMI page (off-season, Oct 2026): forecast covers off-piste only (not groomed slopes), issued daily for today + 3 days; the chart adds the 2 previous days. Show the off-piste note in the app. No per-area text in the HTML off-season, so option A below still needs the in-season check.
+
+#### Local forecasts (checked Oct 2026): preferred over parsing FMI images
+
+**Pyhätunturi: lumiturvallisuuskeskus.fi** (Luosto-Pyhä area, Pyhä only)
+- WordPress custom post type: `GET https://lumiturvallisuuskeskus.fi/wp-json/wp/v2/lumivyoryennusteet?per_page=100`. 319 forecasts across seasons; 2025–26: 58 (1.11.2025–15.4.2026, ~2–3/week). RSS: `/lumivyoryennuste/feed/`.
+- CORS reflects `https://kalleoksa.github.io`: the client could read it directly, but keep it in the cron script with the rest.
+- `acf` is empty; parse `content.rendered` (EAWS conventions):
+  - Danger level: icon filename `Icon-Avalanche-Danger-Level-Dry-Snow-<n>-EAWS….png`.
+  - Problems: EAWS icon filenames (`…Problem-Wind-Drifted-Snow…`, `…Persistent-Weak-Layer…`) and headings "Lumivyöryongelma N – …".
+  - Per problem: `Koko:` (size), `Aiheuttaja:` (trigger), `Esiintyvyys:` (distribution), `Todennäköisyys:` (likelihood).
+  - Aspects: inline SVG compass, 8 polygons in fixed order E, N, S, W, SE, NE, SW, NW; `fill: #F2B31D` = dangerous aspect.
+  - "Lisätty" (published) and "Voimassa" (valid until) times; weather and snow text.
+- Maps to V (danger level) and to aspect inputs, as suggestions only.
+
+**Ylläs: ski.yllas.fi** (Ylläs-Levi area, Ylläs only)
+- Single page overwritten per forecast, no archive: `GET https://ski.yllas.fi/wp-json/wp/v2/pages/311` (or the page HTML). CORS reflects github.io.
+- Level is an icon in the `y-avalanche` block: `img.y-avalanche__icon`, level in `alt`. Off-season: `No-rating.png`, alt "Ei luokiteltu". In-season icon names unknown.
+- Forecasters: CAA-qualified avalanche practitioners (per the page).
+
+Coverage: Pyhä and Ylläs get local forecasts; Kilpisjärvi, Ounas-Pallas, Saariselkä, Ruka (and Levi) remain FMI-only.
+
+- [ ] Before sharing the app: ask both for permission, Lumiturvallisuuskeskus (contact page, 044 703 8806) and Ylläs Ski.
+- [ ] In season (Dec): record Ylläs icon filenames/alt texts per level; confirm Pyhä filename pattern for levels 1–5.
+- [ ] Parser rejects unknown icon names → "unknown" + link (safety rule above).
+
+Options for FMI's areas in the cron script, best first:
+- [ ] **A. Scrape the page HTML.** Check in season (Dec) whether `lumivyoryennuste` contains per-area level and text in markup. If yes: parse it, and reject the result when the "Updated" date isn't today.
+- [ ] **B. Sample pixel colours.** Read the danger colour at fixed per-area coordinates in `show-graph.php?location=<area>` (simpler, 6 days) or in `show-map.php`.
+  - Deterministic, no OCR.
+  - Breaks silently if the layout changes. Guard against that: check the expected legend colours at known pixels, and output "unknown" when they don't match.
+- [ ] **C. Fallback, always present:** link to ilmatieteenlaitos.fi/lumivyoryennuste and the `show-map.php` image with FMI attribution.
+- [ ] Ask FMI via the open-data support form (ilmatieteenlaitos.fi/tukipyynto-avoimesta-datasta) whether an avalanche feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024. An official feed replaces A/B.
+- [ ] Before sharing the app: check FMI's terms for scraping and reusing the page and images. robots.txt + ilmatieteenlaitos.fi terms of use.
+
+### Verify before building
+
+- [x] CORS headers on api.open-meteo.com and opendata.fmi.fi from a github.io origin. Both return `Access-Control-Allow-Origin` on GET and preflight (checked 2026-10-20).
+- [ ] Red-flag thresholds from a citable source, e.g. SLF/EAWS critical new-snow amounts. Don't invent numbers.
+  - [x] Wind: 6–7 m/s moves dry snow (FMI, tuntureiden-saaolot).
+  - [ ] New snow (cm / 24 h, 72 h).
+  - [ ] Warming (°C / 24 h).
+- [x] FMI station IDs near each of the 6 areas (summit station table). Elevations still open.
+
+### Build notes
+
+- [ ] Define the `latest.json` shape first: per area → forecast, observations, danger level + source + issued/valid times, and fetch time. It's the contract between the cron script and the app.
+- [ ] Parser tests on saved fixtures (FMI XML, Pyhä/Ylläs WP JSON, Open-Meteo). Capture in-season snapshots in Dec.
+- [ ] Failures: a failed cron run emails the repo owner (GitHub default). A parser returning "unknown" doesn't fail the run, so log it in `latest.json`.
+- [ ] Attribution in the app: FMI and Open-Meteo (CC BY 4.0), local forecast providers.
+- [ ] New UI strings in both EN and FI.
+
+### Out of scope
+
+- Norway and Sweden (NVE, Naturvårdsverket, SMHI): only if you tour there.
+- ECMWF GRIB, HARMONIE downloads, radar overlays.
+- Terrain and steepness maps.
+
+## Sources
+
+- FMI, Tuntureiden sääolot (wind threshold, inversions, fell stations): https://www.ilmatieteenlaitos.fi/tuntureiden-saaolot
+
+- Munter 1996 table: https://www.oocities.org/yosemite/trails/Trails/1996/3x3.html
+- Bergundsteigen 4/01: https://info.skitourenguru.ch/download/articles/35-36%20(reduktionsmethode).pdf
+- Skitourenguru: https://info.skitourenguru.ch/index.php/reduktionsmethoden
+- ScienceDirect review: https://www.sciencedirect.com/science/article/pii/S0165232X19301788
+- PisteHors: https://pistehors.com/news/ski/comments/avalanche-risk-reduction-methods/index.html
+- Nortind: http://www.nortind.no/images/stories/Nortind/arbeidsbok/tre_x_tre.pdf
