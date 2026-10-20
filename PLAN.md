@@ -24,6 +24,19 @@ Status (Oct 2026): research only, no app code changed yet.
 - [ ] Source of "4×2×3=24" in the level-5 text (code allows max 4 × 8 × 3 = 96).
 - [ ] "Avoid northern half": book says WNW–N–ESE (180°) or WNW–N–ENE (135°, current)?
 
+### Book sources: citations to verify (from your copies)
+
+Do not commit book screenshots (copyright). Record title, edition, year and page numbers only.
+
+| Cited in app/README | Status (web check, Oct 2026) | To do |
+|---|---|---|
+| Münter, *3×3 Reduction Method* (Brooks-Range Mountaineering, 2007) | **Not found.** Brooks-Range made snow-study cards, none mentioning Munter. Munter's actual book is *3×3 Lawinen* (1997; later editions ~2003/2008). | [ ] Check the screenshot's title page: which book is it? Fix the citation. |
+| Münter / *Vapaalasku — Tieto, Taito, Turvallisuus* (Kustannus Oy Vapaalasku) | Title exists in the National Library of Finland as *Vapaa lasku: tieto, taito, turvallisuus*. Author, year and publisher not confirmed. Munter isn't its author; the book likely presents his method. | [ ] Record author/editor, year, publisher, and the pages for the 3×3 matrix and the factor table. |
+| Jeremy Jones, *The Art of Shralpinism* | Confirmed: Mountaineers Books, 18 Oct 2022, ISBN 9781680513301. | [ ] Page numbers for red flags, "spooky moderate" (phrase not found online) and the tips lists. |
+
+- [ ] Spell the author as **Munter** everywhere (section 3).
+- [ ] Once confirmed, put the full citations in README and give each app `source:` string a page reference.
+
 ## 2. Calculator fixes (confirmed bugs)
 
 - [ ] T1: add ×1 option "Steepest section ≥40°" (source: >39° = no reduction).
