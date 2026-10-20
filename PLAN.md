@@ -83,7 +83,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - snowfall
   - temperature (2 m and freezing level)
   - wind and gusts at 10 m
-  - 850 hPa wind (ECMWF, via the same API)
+  - summit wind and temperature at 925 hPa (≈700–800 m, Lapland fell-top height); 850 hPa (≈1500 m) is too high
 - [ ] Map data to existing red flags as **suggestions** the user confirms. Never auto-check.
   - New snow: 24 h / 72 h snowfall above a threshold.
   - Wind: sustained wind above the snow-transport threshold.
@@ -91,6 +91,16 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
 - [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining.
 - [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
 - [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
+
+### Reference: tunturisaa.fi (checked Oct 2026)
+
+Shows separate summit and valley forecasts for Lapland fells. Built after the Pallas accident (New Year 2024), where valley-level forecasts showed much lighter wind than on the fell top.
+- SvelteKit front end; data from its own backend `tunturisaa-server.onrender.com/trpc` (tRPC: `getOverview`, `getMountain`, refetched every 15 min). Backend not reachable from here, so CORS and the method behind it are unverified.
+- Source: FMI open data, HARMONIE-AROME. Per hour: `{ ts, smartSymbol, peak: {temperature, windSpeedMs, windDirectionDeg}, base: {…}, cloudLowerLimit, cloudLowerLimitHeight }`.
+- Don't use it as a source: its terms allow personal, non-commercial use only and forbid copying; it runs on a free host.
+- Copy the idea instead: show summit vs valley wind/temperature and the cloud base.
+  - [ ] Open-Meteo: 925 hPa wind/temperature for the summit, 10 m for the valley, `cloud_cover_low` / cloud base if available.
+  - [ ] Or FMI WFS `fmi::forecast::harmonie::hybrid::point::*` / `meps::hybrid::point::*` (model levels by height) in the cron script. Compare with Open-Meteo before picking one.
 
 ### Phase 2 — FMI observations
 
