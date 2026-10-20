@@ -57,17 +57,24 @@ Status: research done, no code changed yet. Step 1 blocks step 2.
 - [ ] CI: `npm ci`, Node 22/24 (20 is EOL).
 - [ ] Move remaining `lang === "en" ? …` strings into `T`.
 
-## 6. Weather feature (planned)
+## 6. Weather & avalanche reports (required feature)
 
-Goal: use data to suggest red flags and inputs, not to show a general weather widget. The app stays a static site with no backend.
+Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to show a general weather widget. A backend is allowed.
 
-### Constraints
+### Architecture: scheduled GitHub Action, no server
 
-- GitHub Pages only, so calls go from the browser. Only keyless APIs with CORS work.
-- MET Norway needs a User-Agent header, which browsers can't set → skip.
-- FMI avalanche forecast has no API → deep link only. Scraping would need a backend.
-- Field use: cache the last fetch and show its age. Depends on offline support (section 4).
+- A Node script runs on a GitHub Actions cron and writes `data/latest.json`. The same workflow deploys it to Pages with the app.
+  - Fetches: Open-Meteo (6 areas), FMI observations (XML parsed in Node), the avalanche level (Phase 3).
+  - No server, secrets, database or cost.
+- The client reads one JSON file from its own origin: no CORS, no per-client API limits, and offline caching is trivial with the service worker (section 4).
+- Cron: every 3 h, Dec–Apr (`0 */3 * 12,1-4 *`). Off-season: daily, or off entirely.
+- Gotchas:
+  - Actions cron can run 15–60 min late.
+  - GitHub disables scheduled workflows after 60 days without repo activity. Re-enable before each season.
+- Upgrade path, only if on-demand freshness is needed: a Cloudflare Worker with the same script.
+- MET Norway is now usable (the server can set a User-Agent), but Open-Meteo is enough. Keep MET as an optional second opinion.
 - Open-Meteo free tier is non-commercial only. OK for a personal app; revisit if monetized.
+- Show data age in the app and label values as model estimates.
 
 ### Phase 1 — Open-Meteo forecast for preset areas
 
@@ -83,15 +90,15 @@ Goal: use data to suggest red flags and inputs, not to show a general weather wi
   - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
 - [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining.
 - [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
-- [ ] Cache the response in localStorage; show it stale with its age when offline.
+- [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
 
 ### Phase 2 — FMI observations
 
 - [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
-- [ ] Parse WFS `timevaluepair` with DOMParser in the browser, about 50 lines.
+- [ ] Parse WFS `timevaluepair` in the cron script (Node XML parser), about 50 lines.
 - Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
 
-### Phase 3 — Danger level link
+### Phase 3 — Avalanche danger level
 
 Checked Oct 2026: no data feed found.
 - None of the 151 FMI WFS stored queries is about avalanches.
@@ -101,9 +108,16 @@ Checked Oct 2026: no data feed found.
 - EAWS feed `static.avalanche.report/eaws_bulletins/<date>/<date>-FI.{json,ratings.json,problems.json,raw.png}`: regions FI-01…FI-06 (FI-01 = Kilpisjärvi), GET has CORS `*`. Shapes: `{"maxDangerRatings": {"FI-01": n, "FI-01:am": n, …}}` and `{"avalancheProblems": {"FI-01": [...], …}}`.
 - **EAWS FI ratings are broken:** every region is 0 in all of 2024–2026 sampled, while the archived `raw.png` for 2026-03-15 shows level 1 everywhere. 2023 had real values. The mirror only ingests FMI's PNG, so there's no reliable data source.
 
-- [ ] Link "Check the current level" to ilmatieteenlaitos.fi/lumivyoryennuste next to the V selector.
-- [ ] Optional: embed the `show-map.php` image (an `<img>` needs no CORS). Unofficial, so it may change. Add a fallback to the link and attribution to FMI.
-- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024.
+Safety rule: a scraped level only **pre-selects** V. The official image and link are always shown next to it, the user confirms, and V is never set silently. If parsing fails, isn't confident, or the data is older than today's forecast, show "unknown" plus the link.
+
+Options in the cron script, best first:
+- [ ] **A. Scrape the page HTML.** Check in season (Dec) whether `lumivyoryennuste` contains per-area level and text in markup. If yes: parse it, and reject the result when the "Updated" date isn't today.
+- [ ] **B. Sample pixel colours.** Read the danger colour at fixed per-area coordinates in `show-graph.php?location=<area>` (simpler, 6 days) or in `show-map.php`.
+  - Deterministic, no OCR.
+  - Breaks silently if the layout changes. Guard against that: check the expected legend colours at known pixels, and output "unknown" when they don't match.
+- [ ] **C. Fallback, always present:** link to ilmatieteenlaitos.fi/lumivyoryennuste and the `show-map.php` image with FMI attribution.
+- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned. Mention the EAWS FI ratings stuck at 0 since 2024. An official feed replaces A/B.
+- [ ] Check FMI's terms for scraping and reusing the page and images. robots.txt + ilmatieteenlaitos.fi terms of use.
 
 ### Verify before building
 
