@@ -86,9 +86,10 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - summit wind and temperature: FMI HARMONIE by height (see "Summit wind source" below); 850 hPa (≈1500 m) is too high
 - [ ] Map data to existing red flags as **suggestions** the user confirms. Never auto-check.
   - New snow: 24 h / 72 h snowfall above a threshold.
-  - Wind: sustained wind above the snow-transport threshold.
+  - Wind: summit wind ≥ 6 m/s while snow is dry (below 0 °C). FMI: "Jo 6–7 m/s tuulen nopeus saa kevyen pakkaslumen liikkeelle" (6–7 m/s already moves light dry snow). Use the lower end.
+  - Wind, stronger signal: the same direction for several days. FMI: days of steady wind build wind slabs on lee slopes. Show the dominant direction so the user knows which aspects are loaded.
   - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
-- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining. Use valley forecast + station observations only; summit temperature is unvalidated, and an error in the cold direction would hide wet-snow risk.
+- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining. Use the **warmest** of valley forecast, summit forecast and summit station observation. Inversions are common, with the summit up to 10–20 °C warmer than the valley (FMI), so valley-only would miss summit thaw. Warm is the safe direction for this suggestion.
 - [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
 - [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
 
@@ -131,7 +132,7 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 - Caveat: the data doesn't support this choice on accuracy. Against Saana observations, FMI by height was the worst wind source (3.0 avg error / +2.7 bias) and 925 hPa the best (2.2 / 0.0). Agreement with tunturisaa.fi isn't evidence, since it's very likely the same model. The sample is 7 h, one calm afternoon, one station.
 - The real reason to accept it: it reads high, which is the safe direction for a wind warning.
 - [ ] Until validated: fire the wind suggestion when **either** FMI by height or FMI 925 hPa is over the threshold.
-- [ ] Possible explanation for Tunturisää's warmer summit temperature: they may read temperature from a pressure level (925 hPa ≈ 800 m) sitting in an inversion. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C.
+- [ ] Possible explanation for Tunturisää's warmer summit temperature: an inversion. FMI confirms summits can be far warmer than valleys. The open question is whether their summit or our by-height value is right. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C; in season, compare both against summit stations.
 - [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
 
 | Area | Summit station | `fmisid` | Elevation (DEM) |
@@ -139,13 +140,16 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 | Kilpisjärvi | Enontekiö Kilpisjärvi Saana | 102017 | ~1001 m |
 | Ounas-Pallas | Muonio Laukukero | 101982 | ~761 m |
 | Ounas-Pallas | Muonio Sammaltunturi (lower) | 101983 | ~562 m |
-| Luosto-Pyhä | Sodankylä Luosto (no station on Pyhä) | 101939 | ~513 m |
+| Luosto-Pyhä | Sodankylä Luosto | 101939 | ~513 m |
+| Luosto-Pyhä | Pelkosenniemi Pyhätunturi (FMI fell station list) | ? | ? |
 | Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
 | Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
-| Ylläs-Levi | none: no summit station on Ylläs or Levi | – | – |
+| Ylläs-Levi | Kittilä Kenttärova (fell between Levi and Ylläs; FMI fell station list) | ? | ? |
 
-- Ylläs-Levi can't be validated: no summit station. Ylläs is the area the app names in its own text.
-  - [ ] Mark Ylläs/Levi summit values in the app as "model only, unvalidated".
+- FMI's fell station list (ilmatieteenlaitos.fi/tuntureiden-saaolot) also names Pyhätunturi, Kenttärova and Saariselkä matkailukeskus (a valley reference). The earlier "no station on Pyhä / Ylläs-Levi" was wrong.
+  - [ ] Look up `fmisid` and elevation for Pyhätunturi, Kenttärova and Saariselkä matkailukeskus.
+- Ylläs and Levi summits still have no station; Kenttärova is a lower fell between them. It gives partial validation only.
+  - [ ] Mark Ylläs/Levi summit values in the app as "model, validated only against Kenttärova".
 
 ### Phase 2 — FMI observations
 
@@ -188,7 +192,10 @@ Options in the cron script, best first:
 ### Verify before building
 
 - [x] CORS headers on api.open-meteo.com and opendata.fmi.fi from a github.io origin. Both return `Access-Control-Allow-Origin` on GET and preflight (checked 2026-10-20).
-- [ ] Red-flag thresholds (new snow cm, wind m/s, warming °C) from a citable source, e.g. SLF/EAWS critical new-snow amounts. Don't invent numbers.
+- [ ] Red-flag thresholds from a citable source, e.g. SLF/EAWS critical new-snow amounts. Don't invent numbers.
+  - [x] Wind: 6–7 m/s moves dry snow (FMI, tuntureiden-saaolot).
+  - [ ] New snow (cm / 24 h, 72 h).
+  - [ ] Warming (°C / 24 h).
 - [ ] FMI station IDs near each of the 6 areas.
 
 ### Out of scope
@@ -198,6 +205,8 @@ Options in the cron script, best first:
 - Terrain and steepness maps.
 
 ## Sources
+
+- FMI, Tuntureiden sääolot (wind threshold, inversions, fell stations): https://www.ilmatieteenlaitos.fi/tuntureiden-saaolot
 
 - Munter 1996 table: https://www.oocities.org/yosemite/trails/Trails/1996/3x3.html
 - Bergundsteigen 4/01: https://info.skitourenguru.ch/download/articles/35-36%20(reduktionsmethode).pdf
