@@ -57,6 +57,56 @@ Status: research done, no code changed yet. Step 1 blocks step 2.
 - [ ] CI: `npm ci`, Node 22/24 (20 is EOL).
 - [ ] Move remaining `lang === "en" ? …` strings into `T`.
 
+## 6. Weather feature (planned)
+
+Goal: use data to suggest red flags and inputs, not to show a general weather widget. The app stays a static site with no backend.
+
+### Constraints
+
+- GitHub Pages only, so calls go from the browser. Only keyless APIs with CORS work.
+- MET Norway needs a User-Agent header, which browsers can't set → skip.
+- FMI avalanche forecast has no API → deep link only. Scraping would need a backend.
+- Field use: cache the last fetch and show its age. Depends on offline support (section 4).
+- Open-Meteo free tier is non-commercial only. OK for a personal app; revisit if monetized.
+
+### Phase 1 — Open-Meteo forecast for preset areas
+
+- [ ] Area picker: the 6 FMI avalanche areas (Ruka, Luosto-Pyhä, Ylläs-Levi, Ounas-Pallas, Saariselkä, Kilpisjärvi), using fell-top coordinates.
+- [ ] One GET per area with `models=best_match`. Fetch the past 72 h and the next 48 h:
+  - snowfall
+  - temperature (2 m and freezing level)
+  - wind and gusts at 10 m
+  - 850 hPa wind (ECMWF, via the same API)
+- [ ] Map data to existing red flags as **suggestions** the user confirms. Never auto-check.
+  - New snow: 24 h / 72 h snowfall above a threshold.
+  - Wind: sustained wind above the snow-transport threshold.
+  - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
+- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining.
+- [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
+- [ ] Cache the response in localStorage; show it stale with its age when offline.
+
+### Phase 2 — FMI observations
+
+- [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
+- [ ] Parse WFS `timevaluepair` with DOMParser in the browser, about 50 lines.
+
+### Phase 3 — Danger level link
+
+- [ ] "Check the current level" link to ilmatieteenlaitos.fi/lumivyoryennuste next to the V selector.
+- [ ] Optional: email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists.
+
+### Verify before building
+
+- [ ] CORS headers on api.open-meteo.com and opendata.fmi.fi from a github.io origin. Couldn't test from this environment.
+- [ ] Red-flag thresholds (new snow cm, wind m/s, warming °C) from a citable source, e.g. SLF/EAWS critical new-snow amounts. Don't invent numbers.
+- [ ] FMI station IDs near each of the 6 areas.
+
+### Out of scope
+
+- Norway and Sweden (NVE, Naturvårdsverket, SMHI): only if you tour there.
+- ECMWF GRIB, HARMONIE downloads, radar overlays.
+- Terrain and steepness maps.
+
 ## Sources
 
 - Munter 1996 table: https://www.oocities.org/yosemite/trails/Trails/1996/3x3.html
