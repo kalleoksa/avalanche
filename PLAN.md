@@ -83,7 +83,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - snowfall
   - temperature (2 m and freezing level)
   - wind and gusts at 10 m
-  - summit wind and temperature at 925 hPa (≈700–800 m, Lapland fell-top height); 850 hPa (≈1500 m) is too high
+  - summit wind and temperature: FMI HARMONIE by height (see "Summit wind source" below); 850 hPa (≈1500 m) is too high
 - [ ] Map data to existing red flags as **suggestions** the user confirms. Never auto-check.
   - New snow: 24 h / 72 h snowfall above a threshold.
   - Wind: sustained wind above the snow-transport threshold.
@@ -99,8 +99,21 @@ Shows separate summit and valley forecasts for Lapland fells. Built after the Pa
 - Source: FMI open data, HARMONIE-AROME. Per hour: `{ ts, smartSymbol, peak: {temperature, windSpeedMs, windDirectionDeg}, base: {…}, cloudLowerLimit, cloudLowerLimitHeight }`.
 - Don't use it as a source: its terms allow personal, non-commercial use only and forbid copying; it runs on a free host.
 - Copy the idea instead: show summit vs valley wind/temperature and the cloud base.
-  - [ ] Open-Meteo: 925 hPa wind/temperature for the summit, 10 m for the valley, `cloud_cover_low` / cloud base if available.
-  - [ ] Or FMI WFS `fmi::forecast::harmonie::hybrid::point::*` / `meps::hybrid::point::*` (model levels by height) in the cron script. Compare with Open-Meteo before picking one.
+  - [ ] Summit: FMI HARMONIE by height (below). Valley: 10 m wind. Cloud base if a source has it.
+
+### Summit wind source (compared Oct 2026, Saana)
+
+Saana summit station `fmisid=102017` (~1002 m) as ground truth.
+- FMI `fmi::forecast::harmonie::hybrid::point::simple` takes `height` **above model terrain**, not sea level. HARMONIE's 2.5 km terrain at Saana is 574 m (real 1002 m). Per fell: `height = summit elevation − GeopHeight` (from `harmonie::surface::point`, parameter `GeopHeight`).
+- 925 hPa sits at ~790–875 m: above most of the 6 areas' summits (Ruka, Levi, Luosto, Kaunispää ~440–530 m; Ylläs ~720 m). A fixed pressure level doesn't fit; the per-fell height does.
+- 7 h overlap with observations (calm afternoon), wind error avg / bias m/s:
+  - FMI by height 3.0 / +2.7; FMI 925 hPa 2.2 / 0.0; Open-Meteo 925 hPa 2.2 / −2.2.
+  - Ground level (FMI surface, Open-Meteo 10 m) ~3.5 / −3.5: far too low at the summit.
+- Next 47 h mean wind: FMI by height **11.1**, FMI 925 hPa 7.6, Open-Meteo 925 hPa **4.8**, Open-Meteo 10 m 5.4. The gap decides whether the wind red flag fires.
+- Open-Meteo gave identical 925 hPa values for best_match, ECMWF and MET Norway: likely falls back to ECMWF 0.25° for pressure levels. Unconfirmed (proxy hit Open-Meteo's daily limit).
+
+Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snowfall and valley values.
+- [ ] Validate in season: the cron script logs both forecasts next to summit stations (Saana 102017, plus Pallas and Ylläs) for ~2 weeks in Dec, then compare error.
 
 ### Phase 2 — FMI observations
 
