@@ -88,7 +88,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - New snow: 24 h / 72 h snowfall above a threshold.
   - Wind: sustained wind above the snow-transport threshold.
   - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
-- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining.
+- [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining. Use valley forecast + station observations only; summit temperature is unvalidated, and an error in the cold direction would hide wet-snow risk.
 - [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
 - [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
 
@@ -100,6 +100,9 @@ Shows separate summit and valley forecasts for Lapland fells. Built after the Pa
 - Don't use it as a source: its terms allow personal, non-commercial use only and forbid copying; it runs on a free host.
 - Copy the idea instead: show summit vs valley wind/temperature and the cloud base.
   - [ ] Summit: FMI HARMONIE by height (below). Valley: 10 m wind. Cloud base if a source has it.
+- Product scope: tunturisaa.fi already shows the full summit/valley forecast. Don't rebuild it. This app's value is turning data into red-flag and calculator suggestions.
+  - [ ] Keep the weather view minimal: only the values behind each suggestion, plus their age.
+  - [ ] Link to tunturisaa.fi for the full forecast.
 
 ### Summit wind source (compared Oct 2026, Saana)
 
@@ -125,6 +128,10 @@ Cross-check with tunturisaa.fi (forecast 21.10 22:00 local = 19 UTC; forecast vs
 - FMI `meps::*` queries return identical values to `harmonie::*` on open data.
 
 Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snowfall and valley values. Summit temperature stays unconfirmed until validated.
+- Caveat: the data doesn't support this choice on accuracy. Against Saana observations, FMI by height was the worst wind source (3.0 avg error / +2.7 bias) and 925 hPa the best (2.2 / 0.0). Agreement with tunturisaa.fi isn't evidence, since it's very likely the same model. The sample is 7 h, one calm afternoon, one station.
+- The real reason to accept it: it reads high, which is the safe direction for a wind warning.
+- [ ] Until validated: fire the wind suggestion when **either** FMI by height or FMI 925 hPa is over the threshold.
+- [ ] Possible explanation for Tunturisää's warmer summit temperature: they may read temperature from a pressure level (925 hPa ≈ 800 m) sitting in an inversion. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C.
 - [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
 
 | Area | Summit station | `fmisid` | Elevation (DEM) |
@@ -136,6 +143,9 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 | Ruka | Kuusamo Rukatunturi | 101897 | ~477 m |
 | Saariselkä | Inari Saariselkä Kaunispää | 102006 | ~436 m |
 | Ylläs-Levi | none: no summit station on Ylläs or Levi | – | – |
+
+- Ylläs-Levi can't be validated: no summit station. Ylläs is the area the app names in its own text.
+  - [ ] Mark Ylläs/Levi summit values in the app as "model only, unvalidated".
 
 ### Phase 2 — FMI observations
 
