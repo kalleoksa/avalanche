@@ -92,8 +92,15 @@ Goal: use data to suggest red flags and inputs, not to show a general weather wi
 
 ### Phase 3 — Danger level link
 
-- [ ] "Check the current level" link to ilmatieteenlaitos.fi/lumivyoryennuste next to the V selector.
-- [ ] Optional: email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists.
+Checked Oct 2026: no data feed found.
+- None of the 151 FMI WFS stored queries is about avalanches.
+- The forecast page's map is a server-drawn image (`cdn.fmi.fi/apps/avalanche-forecast/show-map.php?lang=fi|en`) with no JSON call behind it.
+- The FMI warnings GeoServer (`/geoserver/alert/ows`) allows cross-origin requests (CORS `*`) but has no avalanche layer.
+
+- [ ] Link "Check the current level" to ilmatieteenlaitos.fi/lumivyoryennuste next to the V selector.
+- [ ] Optional: embed the `show-map.php` image (an `<img>` needs no CORS). Unofficial, so it may change. Add a fallback to the link and attribution to FMI.
+- [ ] Email avoin-data@ilmatieteenlaitos.fi to ask whether a feed exists or is planned.
+- [ ] Not yet checked: what `cdn.fmi.fi` serves, and whether Finland publishes through the EAWS feeds (`static.avalanche.report`, EAWS regions on GitLab/GitHub). Needs these allowlisted: `cdn.fmi.fi`, `static.avalanche.report`, `gitlab.com`, `raw.githubusercontent.com`. Re-check in season (Dec–Apr).
 
 ### Verify before building
 
