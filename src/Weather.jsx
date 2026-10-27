@@ -1,29 +1,47 @@
 import { useEffect, useState } from "react";
 
-// Example: daily weather for one location, client-side Open-Meteo fetch.
+// Example: daily weather per location, client-side Open-Meteo fetch.
 // Later this moves to the cron-built latest.json (PLAN.md section 6).
-const LOCATION = { name: "Talma Ski", lat: 60.398, lon: 25.175 };
+// Avalanche areas use FMI summit station positions (fmisid), Ylläs-Levi the Ylläs summit.
+const LOCATIONS = [
+  { name: "Kilpisjärvi (Saana)", lat: 69.0428, lon: 20.8509 },
+  { name: "Ounas-Pallas (Laukukero)", lat: 68.0628, lon: 24.0333 },
+  { name: "Ylläs-Levi (Ylläs)", lat: 67.5644, lon: 24.2244 },
+  { name: "Saariselkä (Kaunispää)", lat: 68.4340, lon: 27.4451 },
+  { name: "Luosto-Pyhä (Luosto)", lat: 67.1391, lon: 26.8969 },
+  { name: "Ruka (Rukatunturi)", lat: 66.1661, lon: 29.1518 },
+  { name: "Talma Ski", lat: 60.398, lon: 25.175 },
+];
 const WIND_DRIFT_MS = 6; // FMI: 6–7 m/s moves light dry snow
 
 const DAILY = "snowfall_sum,temperature_2m_min,temperature_2m_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant";
-const URL = `https://api.open-meteo.com/v1/forecast?latitude=${LOCATION.lat}&longitude=${LOCATION.lon}` +
+const urlFor = ({ lat, lon }) => `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
   `&daily=${DAILY}&past_days=3&forecast_days=3&wind_speed_unit=ms&timezone=Europe%2FHelsinki`;
+
+const loadIdx = () => { try { return Math.min(+localStorage.getItem("weatherLoc") || 0, LOCATIONS.length - 1); } catch { return 0; } };
 
 const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 const compass = (deg) => DIRS[Math.round(deg / 45) % 8];
 const fmt = (v, d = 0) => (v == null ? "–" : v.toFixed(d));
 
 export default function Weather({ w, lang }) {
+  const [idx, setIdx] = useState(loadIdx);
   const [data, setData] = useState(null);
+  const [elevation, setElevation] = useState(null);
   const [error, setError] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
+  const loc = LOCATIONS[idx];
 
   useEffect(() => {
-    fetch(URL)
+    let cancelled = false;
+    setData(null); setError(null);
+    try { localStorage.setItem("weatherLoc", idx); } catch {}
+    fetch(urlFor(loc))
       .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then(j => { setData(j.daily); setFetchedAt(new Date()); })
-      .catch(e => setError(String(e)));
-  }, []);
+      .then(j => { if (!cancelled) { setData(j.daily); setElevation(j.elevation); setFetchedAt(new Date()); } })
+      .catch(e => { if (!cancelled) setError(String(e)); });
+    return () => { cancelled = true; };
+  }, [idx]);
 
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Helsinki" });
   const locale = lang === "fi" ? "fi-FI" : "en-GB";
@@ -48,8 +66,15 @@ export default function Weather({ w, lang }) {
 
   return (
     <>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#1c1c1c" }}>{LOCATION.name}</div>
-      <p style={{ fontSize: 11, color: "#aaa", margin: "2px 0 16px", fontStyle: "italic" }}>{w.intro}</p>
+      <select value={idx} onChange={e => setIdx(+e.target.value)} style={{
+        width: "100%", padding: "8px 10px", fontSize: 14, fontWeight: 700, fontFamily: "inherit",
+        color: "#1c1c1c", background: "transparent", border: "1.5px solid #1c1c1c", borderRadius: 4,
+      }}>
+        {LOCATIONS.map((l, i) => <option key={l.name} value={i}>{l.name}</option>)}
+      </select>
+      <p style={{ fontSize: 11, color: "#aaa", margin: "6px 0 16px", fontStyle: "italic" }}>
+        {w.intro}{data && elevation != null && <> {w.elevation} {Math.round(elevation)} m.</>}
+      </p>
 
       {error && <div style={{ fontSize: 12, color: "#c0392b" }}>{w.error} ({error})</div>}
       {!data && !error && <div style={{ fontSize: 12, color: "#aaa" }}>{w.loading}</div>}
@@ -93,6 +118,7 @@ export default function Weather({ w, lang }) {
         <div>{w.legend}</div>
         {fetchedAt && <div>{w.fetched} {fetchedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} · {w.model}</div>}
         <div>{w.source} <a href="https://open-meteo.com/" style={{ color: "#888" }}>Open-Meteo.com</a> (CC BY 4.0)</div>
+        <div>{w.full} <a href="https://tunturisaa.fi/" style={{ color: "#888" }}>tunturisaa.fi</a></div>
       </div>
     </>
   );
