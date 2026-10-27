@@ -12,11 +12,12 @@ const T = {
     weather: {
       intro: "Example view. Daily values, past 3 days and next 2.",
       loading: "Loading…", error: "Could not load weather",
-      today: "Today", day: "Day", snow: "New snow", temp: "Min / max", wind: "Wind (gust)",
+      today: "Today", day: "Day", snow: "New snow", depth: "Snow depth", temp: "Min / max", wind: "Wind (gust)",
       driftNote: "Wind ≥ 6 m/s with sub-zero temperature: light dry snow drifts (FMI). Consider the wind red flag.",
       legend: "Wind and temperature at 10 m / 2 m above ground.",
       fetched: "Fetched", model: "model estimate", source: "Weather data:",
       elevation: "Values for elevation", full: "Full fell forecast:",
+      depthSource: "Snow depth measured at", fmiCredit: "Ilmatieteen laitoksen avoin data, säähavainnot",
     },
     next: "Continue",
     matrix: {
@@ -216,11 +217,12 @@ const T = {
     weather: {
       intro: "Esimerkkinäkymä. Päiväkohtaiset arvot, edelliset 3 päivää ja seuraavat 2.",
       loading: "Ladataan…", error: "Säätietoja ei saatu",
-      today: "Tänään", day: "Päivä", snow: "Uusi lumi", temp: "Min / max", wind: "Tuuli (puuska)",
+      today: "Tänään", day: "Päivä", snow: "Uusi lumi", depth: "Lumensyvyys", temp: "Min / max", wind: "Tuuli (puuska)",
       driftNote: "Tuuli ≥ 6 m/s pakkasella: kevyt pakkaslumi lähtee liikkeelle (Ilmatieteen laitos). Harkitse tuuli-lippua.",
       legend: "Tuuli 10 m ja lämpötila 2 m maanpinnasta.",
       fetched: "Haettu", model: "malliennuste", source: "Säätiedot:",
       elevation: "Arvot korkeudelle", full: "Koko tunturiennuste:",
+      depthSource: "Lumensyvyys mitattu asemalla", fmiCredit: "Ilmatieteen laitoksen avoin data, säähavainnot",
     },
     next: "Jatka",
     matrix: {

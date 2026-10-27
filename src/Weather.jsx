@@ -3,20 +3,41 @@ import { useEffect, useState } from "react";
 // Example: daily weather per location, client-side Open-Meteo fetch.
 // Later this moves to the cron-built latest.json (PLAN.md section 6).
 // Avalanche areas use FMI summit station positions (fmisid), Ylläs-Levi the Ylläs summit.
+// Summit stations don't measure snow; snowStation is the nearest FMI station that does.
 const LOCATIONS = [
-  { name: "Kilpisjärvi (Saana)", lat: 69.0428, lon: 20.8509 },
-  { name: "Ounas-Pallas (Laukukero)", lat: 68.0628, lon: 24.0333 },
-  { name: "Ylläs-Levi (Ylläs)", lat: 67.5644, lon: 24.2244 },
-  { name: "Saariselkä (Kaunispää)", lat: 68.4340, lon: 27.4451 },
-  { name: "Luosto-Pyhä (Luosto)", lat: 67.1391, lon: 26.8969 },
-  { name: "Ruka (Rukatunturi)", lat: 66.1661, lon: 29.1518 },
-  { name: "Talma Ski", lat: 60.398, lon: 25.175 },
+  { name: "Kilpisjärvi (Saana)", lat: 69.0428, lon: 20.8509, snowStation: { id: 102016, name: "Kilpisjärvi kyläkeskus" } },
+  { name: "Ounas-Pallas (Laukukero)", lat: 68.0628, lon: 24.0333, snowStation: { id: 101987, name: "Kenttärova" } },
+  { name: "Ylläs-Levi (Ylläs)", lat: 67.5644, lon: 24.2244, snowStation: { id: 101990, name: "Kittilä Pakatti" } },
+  { name: "Saariselkä (Kaunispää)", lat: 68.4340, lon: 27.4451, snowStation: { id: 102005, name: "Saariselkä matkailukeskus" } },
+  { name: "Luosto-Pyhä (Luosto)", lat: 67.1391, lon: 26.8969, snowStation: { id: 101932, name: "Sodankylä Tähtelä" } },
+  { name: "Ruka (Rukatunturi)", lat: 66.1661, lon: 29.1518, snowStation: { id: 101887, name: "Kuusamo Kiutaköngäs" } },
+  { name: "Talma Ski", lat: 60.398, lon: 25.175, snowStation: { id: 101004, name: "Helsinki Kumpula" } },
 ];
 const WIND_DRIFT_MS = 6; // FMI: 6–7 m/s moves light dry snow
 
 const DAILY = "snowfall_sum,temperature_2m_min,temperature_2m_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant";
 const urlFor = ({ lat, lon }) => `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
   `&daily=${DAILY}&past_days=3&forecast_days=3&wind_speed_unit=ms&timezone=Europe%2FHelsinki`;
+
+// FMI snow depth (cm), hourly for the past 4 days. -1 = no snow cover, NaN = no reading.
+const snowUrlFor = (id) => {
+  const start = new Date(Date.now() - 4 * 864e5).toISOString().slice(0, 13) + ":00:00Z";
+  return "https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature" +
+    `&storedquery_id=fmi::observations::weather::simple&fmisid=${id}&parameters=snow_aws&timestep=60&starttime=${start}`;
+};
+const localDate = (d) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Helsinki" });
+
+// Last valid reading per local date: { "2026-10-27": 12, ... }
+const parseSnow = (xml) => {
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  const out = {};
+  for (const el of doc.getElementsByTagName("BsWfs:BsWfsElement")) {
+    const v = parseFloat(el.getElementsByTagName("BsWfs:ParameterValue")[0]?.textContent);
+    if (Number.isNaN(v)) continue;
+    out[localDate(new Date(el.getElementsByTagName("BsWfs:Time")[0].textContent))] = Math.max(v, 0);
+  }
+  return out;
+};
 
 const loadIdx = () => { try { return Math.min(+localStorage.getItem("weatherLoc") || 0, LOCATIONS.length - 1); } catch { return 0; } };
 
@@ -30,6 +51,7 @@ export default function Weather({ w, lang }) {
   const [elevation, setElevation] = useState(null);
   const [error, setError] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
+  const [depth, setDepth] = useState({});
   const loc = LOCATIONS[idx];
 
   useEffect(() => {
@@ -40,10 +62,15 @@ export default function Weather({ w, lang }) {
       .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(j => { if (!cancelled) { setData(j.daily); setElevation(j.elevation); setFetchedAt(new Date()); } })
       .catch(e => { if (!cancelled) setError(String(e)); });
+    setDepth({});
+    fetch(snowUrlFor(loc.snowStation.id))
+      .then(r => (r.ok ? r.text() : Promise.reject(r.status)))
+      .then(x => { if (!cancelled) setDepth(parseSnow(x)); })
+      .catch(() => {}); // column shows "–"
     return () => { cancelled = true; };
   }, [idx]);
 
-  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Helsinki" });
+  const today = localDate(new Date());
   const locale = lang === "fi" ? "fi-FI" : "en-GB";
 
   const days = data ? data.time.map((t, i) => {
@@ -52,9 +79,9 @@ export default function Weather({ w, lang }) {
     const wind = data.wind_speed_10m_max[i];
     return {
       date: t,
-      label: t === today ? w.today : new Date(t).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "numeric" }),
+      label: t === today ? w.today : new Date(t).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "numeric", timeZone: "UTC" }),
       past: t < today,
-      snow, tMin: data.temperature_2m_min[i], tMax, wind,
+      snow, depth: depth[t], tMin: data.temperature_2m_min[i], tMax, wind,
       gust: data.wind_gusts_10m_max[i],
       dir: data.wind_direction_10m_dominant[i],
       drift: wind != null && tMax != null && wind >= WIND_DRIFT_MS && tMax < 0,
@@ -85,6 +112,7 @@ export default function Weather({ w, lang }) {
             <tr>
               <th style={{ ...head, textAlign: "left" }}>{w.day}</th>
               <th style={head}>{w.snow}<br />cm</th>
+              <th style={head}>{w.depth}<br />cm</th>
               <th style={head}>{w.temp}<br />°C</th>
               <th style={head}>{w.wind}<br />m/s</th>
             </tr>
@@ -98,6 +126,7 @@ export default function Weather({ w, lang }) {
               }}>
                 <td style={{ ...cell, textAlign: "left", fontFamily: "inherit", fontWeight: d.date === today ? 700 : 400 }}>{d.label}</td>
                 <td style={{ ...cell, fontWeight: d.snow > 0 ? 700 : 400 }}>{fmt(d.snow, 1)}</td>
+                <td style={cell}>{fmt(d.depth)}</td>
                 <td style={cell}>{fmt(d.tMin)} / {fmt(d.tMax)}</td>
                 <td style={{ ...cell, color: d.drift ? "#c0392b" : "inherit", fontWeight: d.drift ? 700 : 400 }}>
                   {fmt(d.wind)} <span style={{ opacity: 0.55 }}>({fmt(d.gust)})</span> {d.dir != null ? compass(d.dir) : ""}
@@ -118,6 +147,7 @@ export default function Weather({ w, lang }) {
         <div>{w.legend}</div>
         {fetchedAt && <div>{w.fetched} {fetchedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} · {w.model}</div>}
         <div>{w.source} <a href="https://open-meteo.com/" style={{ color: "#888" }}>Open-Meteo.com</a> (CC BY 4.0)</div>
+        <div>{w.depthSource} {loc.snowStation.name}. <a href="https://www.ilmatieteenlaitos.fi/avoin-data" style={{ color: "#888" }}>{w.fmiCredit}</a> (CC BY 4.0)</div>
         <div>{w.full} <a href="https://tunturisaa.fi/" style={{ color: "#888" }}>tunturisaa.fi</a></div>
       </div>
     </>
