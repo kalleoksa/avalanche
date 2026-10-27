@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Weather from "./Weather";
 
 // ── Translations ─────────────────────────────────────────────────────────────
 
@@ -7,7 +8,15 @@ const T = {
     title: "Avalanche Reduction Method",
     formula: "O = V / (T1 × T2 × T3)",
     source: "Werner Münter / Vapaalasku (Kustannus Oy Vapaalasku)",
-    tabs: ["1. 3×3", "2. Red Flags", "3. Calculator", "4. Tips"],
+    tabs: ["1. 3×3", "2. Red Flags", "3. Calculator", "4. Tips", "5. Weather"],
+    weather: {
+      intro: "Example view. Daily values, past 3 days and next 2.",
+      loading: "Loading…", error: "Could not load weather",
+      today: "Today", day: "Day", snow: "New snow", temp: "Min / max", wind: "Wind (gust)",
+      driftNote: "Wind ≥ 6 m/s with sub-zero temperature: light dry snow drifts (FMI). Consider the wind red flag.",
+      legend: "Wind and temperature at 10 m / 2 m above ground.",
+      fetched: "Fetched", model: "model estimate", source: "Weather data:",
+    },
     next: "Continue",
     matrix: {
       intro: "The 3×3 method assesses risk across three phases (planning, check, execution) and three criteria (conditions, terrain, human factor).",
@@ -202,7 +211,15 @@ const T = {
     title: "Avalanche Reduction Method",
     formula: "O = V / (T1 × T2 × T3)",
     source: "Werner Münter / Vapaalasku (Kustannus Oy Vapaalasku)",
-    tabs: ["1. 3×3", "2. Liput", "3. Laskuri", "4. Vinkit"],
+    tabs: ["1. 3×3", "2. Liput", "3. Laskuri", "4. Vinkit", "5. Sää"],
+    weather: {
+      intro: "Esimerkkinäkymä. Päiväkohtaiset arvot, edelliset 3 päivää ja seuraavat 2.",
+      loading: "Ladataan…", error: "Säätietoja ei saatu",
+      today: "Tänään", day: "Päivä", snow: "Uusi lumi", temp: "Min / max", wind: "Tuuli (puuska)",
+      driftNote: "Tuuli ≥ 6 m/s pakkasella: kevyt pakkaslumi lähtee liikkeelle (Ilmatieteen laitos). Harkitse tuuli-lippua.",
+      legend: "Tuuli 10 m ja lämpötila 2 m maanpinnasta.",
+      fetched: "Haettu", model: "malliennuste", source: "Säätiedot:",
+    },
     next: "Jatka",
     matrix: {
       intro: "3×3-menetelmä arvioi riskin kolmessa vaiheessa (suunnittelu, tarkistus, toteutus) kolmen kriteerin kautta (olosuhteet, maasto, inhimillinen tekijä).",
@@ -492,7 +509,7 @@ export default function App() {
     ? [rf1, !wetSnow && rf2 > 1 ? rf2 : null, rf3].filter(Boolean).join(" × ")
     : null;
 
-  const TABS = ["3x3", "flags", "calc", "tricks"];
+  const TABS = ["3x3", "flags", "calc", "tricks", "weather"];
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4f0e6", fontFamily: "'Georgia', 'Times New Roman', serif", padding: "24px 16px 60px", display: "flex", justifyContent: "center" }}>
@@ -758,6 +775,9 @@ export default function App() {
             ))}
           </>
         )}
+
+        {/* ── Weather ── */}
+        {step === "weather" && <Weather w={tx.weather} lang={lang} />}
 
       </div>
     </div>
