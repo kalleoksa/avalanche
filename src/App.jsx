@@ -16,6 +16,7 @@ const T = {
       driftNote: "Wind ≥ 6 m/s with sub-zero temperature: light dry snow drifts (FMI). Consider the wind red flag.",
       legend: "Wind and temperature at 10 m / 2 m above ground.",
       fetched: "Fetched", model: "model estimate", source: "Weather data:",
+      elevation: "Values for elevation", full: "Full fell forecast:",
     },
     next: "Continue",
     matrix: {
@@ -219,6 +220,7 @@ const T = {
       driftNote: "Tuuli ≥ 6 m/s pakkasella: kevyt pakkaslumi lähtee liikkeelle (Ilmatieteen laitos). Harkitse tuuli-lippua.",
       legend: "Tuuli 10 m ja lämpötila 2 m maanpinnasta.",
       fetched: "Haettu", model: "malliennuste", source: "Säätiedot:",
+      elevation: "Arvot korkeudelle", full: "Koko tunturiennuste:",
     },
     next: "Jatka",
     matrix: {
