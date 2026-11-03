@@ -28,6 +28,11 @@ const fmiUrlFor = ({ lat, lon, fmiHeight }) => fmiHeight
   ? `${FMI_WFS}&storedquery_id=fmi::forecast::harmonie::hybrid::point::simple&latlon=${lat},${lon}&height=${fmiHeight}&parameters=Temperature,WindSpeedMS,WindDirection`
   : `${FMI_WFS}&storedquery_id=fmi::forecast::harmonie::surface::point::simple&latlon=${lat},${lon}&parameters=Temperature,WindSpeedMS,WindGust,WindDirection`;
 
+// Second summit wind for the drift flag only: height = full summit elevation above model terrain.
+// Matches tunturisaa.fi better (Luosto, 3 Nov 2026) and reads higher; which is right is unverified.
+const fmiHighUrlFor = ({ lat, lon, summit }) =>
+  `${FMI_WFS}&storedquery_id=fmi::forecast::harmonie::hybrid::point::simple&latlon=${lat},${lon}&height=${summit}&parameters=WindSpeedMS`;
+
 // FMI snow depth (cm), hourly for the past 4 days. -1 = no snow cover, NaN = no reading.
 const snowUrlFor = (id) => {
   const start = new Date(Date.now() - 4 * 864e5).toISOString().slice(0, 13) + ":00:00Z";
@@ -78,14 +83,15 @@ const agg = (hours) => {
 };
 
 // Per hour, FMI where it has data, else Open-Meteo; new snow always Open-Meteo.
-// Drift flag errs to the safe side: higher wind, colder max of either source.
-const summarize = (keys, om, fmi) => {
+// Drift flag errs to the safe side: highest wind (incl. fmiHigh), colder max of either source.
+const summarize = (keys, om, fmi, fmiHigh) => {
   const main = agg(keys.map(k => (fmi[k] ? { ...fmi[k], snow: om[k]?.snow } : om[k])));
   if (!main) return null;
   const fmiOnly = agg(keys.map(k => fmi[k]));
   const omSame = agg(keys.filter(k => fmi[k]).map(k => om[k])); // Open-Meteo for the FMI hours
   const omAll = agg(keys.map(k => om[k]));
-  const winds = [main.wind, omAll?.wind].filter(v => v != null);
+  const high = agg(keys.map(k => fmiHigh[k]));
+  const winds = [main.wind, omAll?.wind, high?.wind].filter(v => v != null);
   const tMaxs = [main.tMax, omAll?.tMax].filter(v => v != null);
   return {
     ...main,
@@ -107,6 +113,7 @@ export default function Weather({ w, lang }) {
   const [idx, setIdx] = useState(loadIdx);
   const [om, setOm] = useState(null);
   const [fmi, setFmi] = useState({});
+  const [fmiHigh, setFmiHigh] = useState({});
   const [elevation, setElevation] = useState(null);
   const [error, setError] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
@@ -117,13 +124,14 @@ export default function Weather({ w, lang }) {
   useEffect(() => {
     let cancelled = false;
     const get = (url, as) => fetch(url).then(r => (r.ok ? r[as]() : Promise.reject(r.status)));
-    setOm(null); setFmi({}); setDepth({}); setError(null); setOpen(null);
+    setOm(null); setFmi({}); setFmiHigh({}); setDepth({}); setError(null); setOpen(null);
     try { localStorage.setItem("weatherLoc", idx); } catch {}
     get(omUrlFor(loc), "json")
       .then(j => { if (!cancelled) { setOm(omHours(j.hourly)); setElevation(j.elevation); setFetchedAt(new Date()); } })
       .catch(e => { if (!cancelled) setError(String(e)); });
     // FMI failures fall back to Open-Meteo / "–"
     get(fmiUrlFor(loc), "text").then(x => { if (!cancelled) setFmi(fmiHours(x)); }).catch(() => {});
+    if (loc.summit) get(fmiHighUrlFor(loc), "text").then(x => { if (!cancelled) setFmiHigh(fmiHours(x)); }).catch(() => {});
     get(snowUrlFor(loc.snowStation.id), "text").then(x => { if (!cancelled) setDepth(parseSnow(x)); }).catch(() => {});
     return () => { cancelled = true; };
   }, [idx]);
@@ -140,8 +148,8 @@ export default function Weather({ w, lang }) {
     label: date === today ? w.today : new Date(date).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "numeric", timeZone: "UTC" }),
     past: date < today,
     depth: depth[date],
-    ...summarize(hoursOf(date, 0, 24), om, fmi),
-    slots: SLOTS.map(h => ({ label: `${pad(h)}–${pad(h + 3)}`, ...summarize(hoursOf(date, h, 3), om, fmi) })).filter(s => s.wind != null),
+    ...summarize(hoursOf(date, 0, 24), om, fmi, fmiHigh),
+    slots: SLOTS.map(h => ({ label: `${pad(h)}–${pad(h + 3)}`, ...summarize(hoursOf(date, h, 3), om, fmi, fmiHigh) })).filter(s => s.wind != null),
   })).filter(d => d.wind != null);
 
   const cell = { padding: "7px 4px", textAlign: "right", fontFamily: "monospace", fontSize: 12 };
@@ -220,6 +228,7 @@ export default function Weather({ w, lang }) {
       <div style={{ fontSize: 11, color: "#888", marginTop: 14, lineHeight: 1.6 }}>
         <div>{w.pastSource}{elevation != null && <> ({w.modelHeight} {Math.round(elevation)} m)</>}.</div>
         {hasFmi && <div>{loc.summit ? <>{w.fmiSummit} ({loc.summit} m).</> : w.fmiSurface} {w.twoWinds}</div>}
+        {Object.keys(fmiHigh).length > 0 && <div>{w.driftHigh}</div>}
         {fetchedAt && <div>{w.fetched} {fetchedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} · {w.model}</div>}
         <div>{w.source} <a href="https://open-meteo.com/" style={{ color: "#888" }}>Open-Meteo.com</a> (CC BY 4.0) · <a href="https://www.ilmatieteenlaitos.fi/avoin-data" style={{ color: "#888" }}>{w.fmiForecastCredit}</a> (CC BY 4.0)</div>
         <div>{w.depthSource} {loc.snowStation.name}. <a href="https://www.ilmatieteenlaitos.fi/avoin-data" style={{ color: "#888" }}>{w.fmiCredit}</a> (CC BY 4.0)</div>
