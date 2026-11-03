@@ -1,6 +1,6 @@
 # Plan: avalanche app fixes & weather/avalanche data
 
-Status (Oct 2026): research only, no app code changed yet.
+Status (Nov 2026): weather view prototype built and live (section 6, "Built"). Calculator fixes (sections 1–2) not started.
 
 ## Principles
 
@@ -15,6 +15,7 @@ Status (Oct 2026): research only, no app code changed yet.
 1. Section 1 (book check) → section 2 (calculator bugs). The safety bugs come first.
 2. Section 3 content fixes and section 4 offline/persistence. Weather depends on offline support.
 3. Section 6 weather & avalanche data. Parsers need in-season (Dec) checks.
+   - Deviation: a client-side weather view prototype was built first (Oct–Nov 2026, PRs #3–#5) to see the data. Sections 1–2 are still next.
 
 ## 1. Verify against book screenshots (owner: Kalle)
 
@@ -94,6 +95,48 @@ Do not commit book screenshots (copyright). Record title, edition, year and page
 
 Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to show a general weather widget. A backend is allowed.
 
+### Built: weather view prototype (Nov 2026, PRs #3–#5)
+
+"5. Weather" tab, `src/Weather.jsx`. The browser fetches the APIs directly (both send CORS `*`), so there is no cron or `latest.json` yet.
+
+- Location picker: the 6 areas + Talma Ski (test location). The selected area is remembered in localStorage.
+- Table: the past 3 days and the next 2, one row per day. Tap a day to show its eight 3 h rows.
+- Columns: new snow (cm), snow depth (cm), min/max temperature, wind (gust) and direction.
+- Sources, merged per hour:
+  - **Wind and temperature:** FMI HARMONIE where it has data (the next ~48 h), otherwise Open-Meteo `best_match` (past days, and the rest of the range).
+  - **Fells:** `harmonie::hybrid::point` at `height = elevation − GeopHeight` (table below). Gusts are hidden there because hybrid levels have none.
+  - **Talma:** `harmonie::surface::point`, 10 m wind with gusts. `height=10` on hybrid returns NaN.
+  - **New snow:** always Open-Meteo `snowfall`. HARMONIE has only precipitation mm + `PotentialPrecipitationForm`, no `SnowFall`.
+  - **Snow depth:** FMI observations `snow_aws` at the nearest snow station (Phase 2 table). It shows the last valid reading per local day.
+- Wind shown as "FMI / Open-Meteo" when the two differ by more than 3 m/s.
+- Wind drift hint (red): wind ≥ 6 m/s and max temperature < 0 °C. It uses the higher wind and the colder max of either source (safe side). It's a hint only and never sets a red flag.
+- Footer: sources and model height, fetch time, attribution (Open-Meteo CC BY 4.0, "Ilmatieteen laitoksen avoin data, HARMONIE-ennuste / säähavainnot"), link to tunturisaa.fi. EN/FI.
+- Day labels are formatted in UTC from the date string, so they're correct in any browser time zone.
+
+Fell points and HARMONIE heights (GeopHeight checked 3 Nov 2026):
+
+| Area | Point (lat, lon) | Elevation | GeopHeight | `height` |
+|---|---|---|---|---|
+| Kilpisjärvi | Saana station 102017 (69.0428, 20.8509) | 1001 | 574 | 427 |
+| Ounas-Pallas | Laukukero station 101982 (68.0628, 24.0333) | 761 | 434 | 327 |
+| Ylläs-Levi | Ylläs summit, Wikipedia (67.5644, 24.2244) | 719 | 338 | 381 |
+| Saariselkä | Kaunispää station 102006 (68.4340, 27.4451) | 436 | 327 | 109 |
+| Luosto-Pyhä | Luosto station 101939 (67.1391, 26.8969) | 513 | 290 | 223 |
+| Ruka | Rukatunturi station 101897 (66.1661, 29.1518) | 477 | 323 | 154 |
+
+Ylläs-Levi uses the Ylläs summit because Kenttärova (101987) is ~45 km north of Ylläs, near Pallas.
+
+Seen so far (3 Nov 2026, Saana): FMI by height forecast 31 m/s for 4 Nov against 19 m/s from Open-Meteo. FMI 925 hPa peaked at 34 m/s and surface gusts at 27 m/s, so this was a real storm forecast. The ~10 m/s gap between the sources is why both are shown.
+
+Still open vs. the target design:
+- [ ] Move fetching to the cron script + `latest.json` (Architecture below). The prototype hits APIs from each client and doesn't work offline.
+- [ ] Turn the drift hint into a red-flag suggestion the user confirms.
+- [ ] New-snow, warming and wet-snow suggestions (thresholds still need sources).
+- [ ] Valley vs summit side by side; freezing level; cloud base.
+- [ ] Snow depth 24 h change.
+- [ ] Today's min/max mixes Open-Meteo (earlier hours, 2 m at model height) with FMI (later hours, summit height). Decide whether to show them separately.
+- [ ] Remove Talma or keep it as a test location.
+
 ### Architecture: scheduled GitHub Action, no server
 
 - A Node script runs on a GitHub Actions cron and writes `data/latest.json`. The same workflow deploys it to Pages with the app.
@@ -116,7 +159,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
 
 ### Phase 1 — Open-Meteo forecast for preset areas
 
-- [ ] Area picker: the 6 FMI avalanche areas (Ruka, Luosto-Pyhä, Ylläs-Levi, Ounas-Pallas, Saariselkä, Kilpisjärvi), using fell-top coordinates.
+- [x] Area picker: the 6 FMI avalanche areas (Ruka, Luosto-Pyhä, Ylläs-Levi, Ounas-Pallas, Saariselkä, Kilpisjärvi). Uses summit station positions (Ylläs: summit), see "Built".
 - [ ] One GET per area with `models=best_match`. Fetch the past 72 h and the next 48 h:
   - snowfall
   - temperature (2 m and freezing level)
@@ -128,7 +171,7 @@ Goal: use data to suggest red flags and calculator inputs (V, wet snow), not to 
   - Wind, stronger signal: the same direction for several days. FMI: days of steady wind build wind slabs on lee slopes. Show the dominant direction so the user knows which aspects are loaded.
   - Rapid warming: 24 h temperature rise, or the first hours above 0 °C after snowfall.
 - [ ] Calculator: suggest "wet snow" when it's above 0 °C or raining. Use the **warmest** of valley forecast, summit forecast and summit station observation. Inversions are common, with the summit up to 10–20 °C warmer than the valley (FMI), so valley-only would miss summit thaw. Warm is the safe direction for this suggestion.
-- [ ] Show the data source, model time and fetch time. Label values as model estimates (1 km doesn't resolve ridge wind loading).
+- [ ] Show the data source, model time and fetch time. (Source + fetch time done; model run time not shown.) Label values as model estimates (1 km doesn't resolve ridge wind loading).
 - [ ] Client: cache `latest.json`; when offline, show it as stale with its age.
 
 ### Reference: tunturisaa.fi (checked Oct 2026)
@@ -140,8 +183,8 @@ Shows separate summit and valley forecasts for Lapland fells. Built after the Pa
 - Copy the idea instead: show summit vs valley wind/temperature and the cloud base.
   - [ ] Summit: FMI HARMONIE by height (below). Valley: 10 m wind. Cloud base if a source has it.
 - Product scope: tunturisaa.fi already shows the full summit/valley forecast. Don't rebuild it. This app's value is turning data into red-flag and calculator suggestions.
-  - [ ] Keep the weather view minimal: only the values behind each suggestion, plus their age.
-  - [ ] Link to tunturisaa.fi for the full forecast.
+  - [ ] Keep the weather view minimal: only the values behind each suggestion, plus their age. (The prototype shows a full daily/3 h table; trim once suggestions exist.)
+  - [x] Link to tunturisaa.fi for the full forecast.
 
 ### Summit wind source (compared Oct 2026, Saana)
 
@@ -230,10 +273,23 @@ Sources:
 
 ### Phase 2 — FMI observations
 
-- [ ] Snow depth and its 24 h change at pinned `fmisid` stations near each area.
+- [x] Snow depth at pinned `fmisid` stations near each area (client-side in the prototype). [ ] 24 h change.
+  - Summit stations (Saana, Laukukero, Kaunispää, Luosto, Rukatunturi) return no `snow_aws`. Nearest stations that do:
+
+| Area | Snow station (fmisid) | Note |
+|---|---|---|
+| Kilpisjärvi | Kilpisjärvi kyläkeskus (102016) | village, ~2 km |
+| Ounas-Pallas | Kenttärova (101987) | fell station |
+| Ylläs-Levi | Kittilä Pakatti (101990) | ~30 km from Ylläs, near Levi |
+| Saariselkä | Saariselkä matkailukeskus (102005) | valley |
+| Luosto-Pyhä | Sodankylä Tähtelä (101932) | ~30 km |
+| Ruka | Kuusamo Kiutaköngäs (101887) | ~23 km |
+| Talma (test) | Helsinki Kumpula (101004) | |
+
+  - FMI's own snow pages (ilmatieteenlaitos.fi/talvitilanne) show only PNG images from the same stations. Season graphs: `cdn.fmi.fi/apps/snow-depth-observation-graphs/plot.php?station=<fmisid>` (18 stations, incl. 102016, 101932, 101887). No JSON. The graphs compare with the long-term mean; possible `<img>` embed.
 - [ ] Parse WFS `timevaluepair` in the cron script (Node XML parser), about 50 lines.
 - Query by `fmisid`, not `place`: `place=kilpisjarvi` returns 400 "No locations found"; `fmisid=102016` works.
-- Missing values: `NaN` = no reading (treat as missing, not 0). Precipitation: `-1` = no rain, `0` = under 0.1 mm. [ ] Check whether `snow_aws` uses `-1` similarly (in season).
+- Missing values: `NaN` = no reading (treat as missing, not 0). Precipitation: `-1` = no rain, `0` = under 0.1 mm. `snow_aws`: `-1` seen at Kumpula and Kaisaniemi with no snow (27 Oct 2026) → treated as "no snow cover" (0). [ ] Confirm in season.
 
 #### Optional: Snower slope sensors (Luosto-Pyhä only, checked Oct 2026)
 
@@ -300,7 +356,7 @@ Options for FMI's areas in the cron script, best first:
   - [x] Wind: 6–7 m/s moves dry snow (FMI, tuntureiden-saaolot).
   - [ ] New snow (cm / 24 h, 72 h).
   - [ ] Warming (°C / 24 h).
-- [x] FMI station IDs near each of the 6 areas (summit station table). Elevations still open.
+- [x] FMI station IDs near each of the 6 areas (summit station table). Elevations: see "Built" table (station DEM values; Ylläs from Wikipedia).
 
 ### Build notes
 
