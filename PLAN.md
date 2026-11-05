@@ -217,6 +217,23 @@ Decision: FMI HARMONIE by height as the summit source; Open-Meteo stays for snow
 - [ ] Possible explanation for Tunturisää's warmer summit temperature: an inversion. FMI confirms summits can be far warmer than valleys. The open question is whether their summit or our by-height value is right. Test: FMI 925 hPa temperature at Ylläs, 21.10 19 UTC, vs their 5 °C; in season, compare both against summit stations.
 - [ ] Validate in season: the cron script logs both forecasts next to summit stations for ~2 weeks in Dec, then compare wind and temperature error.
 
+#### Storm check, Wed 4 Nov 2026 (which `height`?)
+
+Tunturisää's Luosto summit wind (3 Nov screenshots) matched HARMONIE hybrid at `height` = full summit elevation (514 m above model terrain). Our `height` = elevation − GeopHeight (223 m) read 3–5 m/s lower. Checked both against summit station hourly mean wind for Wed 00–23 Finnish time (forecasts saved 3 Nov ~20 UTC, 26–48 h lead):
+
+| Station | Observed max (gust) | `height` | Mean abs. error | Bias |
+|---|---|---|---|---|
+| Luosto 101939 | 16.9 (20.6) m/s | 223 (ours) | 2.2 | +1.8 |
+| | | 513 (full) | 6.4 | +6.3 |
+| Saana 102017 | 22.8 (30.0) m/s | 427 (ours) | 9.0 | +9.0 |
+| | | 1001 (full) | 15.6 | +15.6 |
+
+- Tunturisää at Luosto (5 hours: 00/03/12/15/20): mean abs. error 5.2, bias +5.1. Ours, same hours: 2.2 / +1.3.
+- Verdict: keep `height = elevation − GeopHeight`. Full summit elevation overshoots by 6–16 m/s, so Tunturisää very likely uses that height and reads too high.
+- Even ours reads high: +1.8 at Luosto, +9 at Saana. That's consistent with October's Saana sample (+2.7). It's the safe direction for a wind warning, but don't present it as accurate. At Luosto, our forecast mean wind was close to the observed gusts.
+- Caveat: one storm, two stations, one model run. Repeat in season (item above).
+- Consequence: PR #6 (drift warning also checks full-height wind) isn't justified. With a +6…+16 m/s bias, it would make the 6 m/s warning fire in almost any wind.
+
 | Area | Summit station | `fmisid` | Elevation (DEM) |
 |---|---|---|---|
 | Kilpisjärvi | Enontekiö Kilpisjärvi Saana | 102017 | ~1001 m |
